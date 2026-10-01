@@ -583,7 +583,21 @@ impl Engine {
             }
             Cmd::StreamError(which, msg) => {
                 log::warn!("stream '{which}' failed: {msg}");
-                self.fail_chain(format!("{which}: {msg}"));
+                if which == "monitor" {
+                    // "Hear myself" is a side feature (and fails e.g. when there is no output
+                    // device). It must never take Sordino Mic down with it: just switch it off.
+                    self.monitor = None;
+                    self.monitoring = false;
+                    self.ab_original = false;
+                    self.ab_flag
+                        .store(false, std::sync::atomic::Ordering::Relaxed);
+                    self.monitor_until = None;
+                    if let Some(w) = &self.worker {
+                        w.send(WorkerCmd::Monitor(None));
+                    }
+                } else {
+                    self.fail_chain(format!("{which}: {msg}"));
+                }
             }
             Cmd::CoreLost => self.on_core_lost(),
             Cmd::Quit => {
@@ -736,7 +750,7 @@ impl Engine {
 
         // 1. DSP worker
         if self.worker.is_none() {
-            match Worker::spawn(self.settings.pipeline_params()) {
+            match Worker::spawn(self.settings.pipeline_params(), self.stats.clone()) {
                 Ok(w) => {
                     *self.shared.worker.lock().unwrap() = Some(w.shared.clone());
                     self.worker = Some(w);

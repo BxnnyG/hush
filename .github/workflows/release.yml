@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,7 +21,7 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: v
         run: |
           ver=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
@@ -32,7 +34,7 @@ jobs:
     needs: version
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: System packages
         run: |
@@ -44,7 +46,7 @@ jobs:
             libayatana-appindicator3-dev librsvg2-dev libssl-dev
 
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -80,7 +82,7 @@ jobs:
           dpkg-deb -I out/*.deb
           rpm -qpl out/*.rpm
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-packages
           path: out/*
@@ -95,7 +97,7 @@ jobs:
           pacman -Syu --noconfirm base-devel git rust clang nodejs npm pipewire wireplumber \
             webkit2gtk-4.1 gtk3 libayatana-appindicator webrtc-audio-processing xdg-utils
           useradd -m builder
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: makepkg
         run: |
           ver=${{ needs.version.outputs.version }}
@@ -108,7 +110,7 @@ jobs:
           su builder -c "SORDINO_SOURCE_URL=file:///home/builder/pkg/src.tar.gz makepkg --noconfirm"
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp /home/builder/pkg/*.pkg.tar.zst "$GITHUB_WORKSPACE/out/"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: arch-package
           path: out/*
@@ -120,7 +122,7 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Shared modules (libayatana-appindicator for the tray)
         run: git clone --depth 1 https://github.com/flathub/shared-modules packaging/flatpak/shared-modules
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
@@ -128,7 +130,7 @@ jobs:
           bundle: bxy-sordino-${{ needs.version.outputs.version }}.flatpak
           manifest-path: packaging/flatpak/io.github.bxnnyg.Sordino.yml
           cache-key: flatpak-${{ hashFiles('Cargo.lock', 'ui/package-lock.json') }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: flatpak
           path: bxy-sordino-*.flatpak
@@ -138,13 +140,28 @@ jobs:
     needs: [version, linux, arch, flatpak]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
+      - name: SBOM (software bill of materials)
+        uses: anchore/sbom-action@v0.24.2
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: dist/sbom.cdx.json
+          upload-artifact: false
+
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      # Signed provenance: anyone can check that the files were built by this workflow from this
+      # repository:  gh attestation verify <file> --repo BxnnyG/sordino
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/*
       - name: Release notes from CHANGELOG.md
         run: |
           ver=${{ needs.version.outputs.version }}
@@ -159,7 +176,8 @@ jobs:
           * **Flatpak** (experimental): `flatpak install --user ./bxy-sordino-*.flatpak`
           * **Any distro**: unpack the tarball and run `./install.sh`
 
-          Verify downloads with `sha256sum -c SHA256SUMS`.
+          Verify downloads with `sha256sum -c SHA256SUMS` or, for signed provenance,
+          `gh attestation verify <file> --repo BxnnyG/sordino`.
           EOF2
       - name: Publish
         env:

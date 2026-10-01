@@ -12,7 +12,7 @@ jobs:
   rust:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: System packages
         run: |
@@ -27,7 +27,7 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -53,3 +53,35 @@ jobs:
 
       - name: Tests
         run: cargo test --release --workspace --no-default-features
+
+  deny:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories bans licenses sources
+
+  # Real PipeWire + WirePlumber in a throw-away session: hotplug, glitch-free audio, default
+  # microphone restore, kill -9. See tests/e2e/run.sh.
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang libclang-dev pkg-config libpipewire-0.3-dev libspa-0.2-dev \
+            pipewire pipewire-bin wireplumber dbus-user-session systemd python3-numpy
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build daemon and CLI
+        run: cargo build --release --no-default-features -p sordinod -p sordinoctl
+
+      - name: End-to-end tests
+        run: |
+          SORDINOD=target/release/sordinod SORDINOCTL=target/release/sordinoctl tests/e2e/run.sh

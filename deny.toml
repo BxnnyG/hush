@@ -1,0 +1,40 @@
+# cargo-deny configuration: licenses, known vulnerabilities (RustSec), duplicate and unwanted sources.
+[graph]
+all-features = false
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+confidence-threshold = 0.9
+# Everything we depend on must be compatible with GPL-3.0-or-later.
+allow = [
+  "MIT",
+  "MIT-0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "MPL-2.0",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "CC0-1.0",
+  "BSL-1.0",
+  "GPL-3.0-or-later",
+  "GPL-3.0",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# DeepFilterNet's libDF is not published in a current version on crates.io.
+allow-git = ["https://github.com/Rikorose/DeepFilterNet"]

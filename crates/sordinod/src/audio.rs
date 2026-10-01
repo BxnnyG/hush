@@ -83,6 +83,8 @@ pub struct AudioStats {
     pub in_dropped: AtomicU64,
     /// Size of the last "Sordino Mic" callback in samples (the graph quantum).
     pub quantum: AtomicU32,
+    /// Size of the last capture block in samples (graph quantum as seen by the microphone side).
+    pub capture_block: AtomicU32,
     /// Number of "Sordino Mic" callbacks so far.
     pub out_callbacks: AtomicU64,
     /// Capture cycles so far, and the value of that counter at the last output callback. Lets the
@@ -146,7 +148,7 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn spawn(params: PipelineParams) -> Result<Worker> {
+    pub fn spawn(params: PipelineParams, stats: Arc<AudioStats>) -> Result<Worker> {
         let (tx, rx) = mpsc::channel();
         let shared = Arc::new(WorkerShared {
             status: AtomicU8::new(WORKER_LOADING),
@@ -162,7 +164,7 @@ impl Worker {
         let s = shared.clone();
         let handle = thread::Builder::new()
             .name("sordino-dsp".into())
-            .spawn(move || worker_main(params, rx, s))?;
+            .spawn(move || worker_main(params, rx, s, stats))?;
         let wake = handle.thread().clone();
         Ok(Worker {
             tx,
@@ -215,9 +217,14 @@ impl Drop for Worker {
     }
 }
 
-fn worker_main(params: PipelineParams, rx: Receiver<WorkerCmd>, shared: Arc<WorkerShared>) {
+fn worker_main(
+    params: PipelineParams,
+    rx: Receiver<WorkerCmd>,
+    shared: Arc<WorkerShared>,
+    stats: Arc<AudioStats>,
+) {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        worker_loop(params, &rx, &shared)
+        worker_loop(params, &rx, &shared, &stats)
     }));
     let msg = match result {
         Ok(Ok(())) => return,
@@ -235,6 +242,7 @@ fn worker_loop(
     params: PipelineParams,
     rx: &Receiver<WorkerCmd>,
     shared: &WorkerShared,
+    stats: &AudioStats,
 ) -> Result<()> {
     // Load the model first, at normal priority: it takes seconds of CPU time without blocking,
     // which a real-time thread is not allowed to do (the kernel would kill the process).
@@ -296,14 +304,16 @@ fn worker_loop(
                 }
                 // Falling behind (more than ~5 hops queued): skip the noise model until we catch up,
                 // rather than dropping audio. Hysteresis avoids flapping.
+                // A capture block of Q samples arrives at once, so Q/HOP hops queued is normal.
+                let normal = stats.capture_block.load(Ordering::Relaxed) as usize / HOP;
                 let backlog = inp.occupied_len() / HOP;
-                if backlog >= 5 && !overloaded {
+                if backlog >= normal + 4 && !overloaded {
                     overloaded = true;
                     pipeline.set_overloaded(true);
                     if shared.overload_events.fetch_add(1, Ordering::Relaxed) == 0 {
                         log::warn!("DSP thread is falling behind real time; temporarily skipping noise suppression");
                     }
-                } else if backlog <= 1 && overloaded {
+                } else if backlog <= normal && overloaded {
                     overloaded = false;
                     pipeline.set_overloaded(false);
                 }
@@ -432,6 +442,9 @@ fn process_capture(stream: &pw::stream::Stream, data: &mut CaptureData) {
     if let Some(samples) = as_f32(&mut bytes[offset.min(end)..end]) {
         let pushed = data.prod.push_slice(samples);
         if let Some(stats) = &data.stats {
+            stats
+                .capture_block
+                .store(samples.len() as u32, Ordering::Relaxed);
             let cycles = stats.in_cycles.fetch_add(1, Ordering::Relaxed) + 1;
             let reading = cycles.saturating_sub(stats.out_seen_cycles.load(Ordering::Relaxed)) < 20;
             if pushed < samples.len() && reading && cycles > WARMUP_CALLBACKS {
