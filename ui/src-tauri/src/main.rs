@@ -1,0 +1,214 @@
+//! Hush desktop app: a thin Tauri shell around the daemon's D-Bus API.
+//!
+//! All audio logic lives in `hushd`. This process only shows state, forwards commands, owns the
+//! tray icon and the autostart entry.
+
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod bus;
+mod tray;
+
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+
+use serde_json::Value;
+use tauri::{AppHandle, Manager, State, WindowEvent};
+
+use bus::Bus;
+
+/// Shared app state.
+pub struct App {
+    pub bus: Bus,
+    /// Last state received from the daemon, used by the tray and the close handler.
+    pub last: Mutex<Option<Value>>,
+    pub tray: Mutex<Option<tray::TrayItems>>,
+}
+
+type Shared<'a> = State<'a, Arc<App>>;
+
+#[tauri::command]
+async fn get_state(app: Shared<'_>) -> Result<Value, String> {
+    let state = app.bus.get_state().await?;
+    *app.last.lock().unwrap() = Some(state.clone());
+    Ok(state)
+}
+
+#[tauri::command]
+async fn apply(app: Shared<'_>, patch: String) -> Result<(), String> {
+    app.bus.call("Apply", &(patch,)).await
+}
+
+#[tauri::command]
+async fn set_profile(app: Shared<'_>, card: u32, index: i32) -> Result<(), String> {
+    app.bus.call("SetProfile", &(card, index)).await
+}
+
+#[tauri::command]
+async fn set_monitor(app: Shared<'_>, on: bool) -> Result<(), String> {
+    app.bus.call("SetMonitor", &(on,)).await
+}
+
+#[tauri::command]
+async fn set_ab_original(app: Shared<'_>, on: bool) -> Result<(), String> {
+    app.bus.call("SetAbOriginal", &(on,)).await
+}
+
+#[tauri::command]
+async fn set_watching(app: Shared<'_>, on: bool) -> Result<(), String> {
+    app.bus.call("SetWatching", &(on,)).await
+}
+
+#[tauri::command]
+async fn start_daemon(app: Shared<'_>) -> Result<(), String> {
+    app.bus.start_daemon().await
+}
+
+#[tauri::command]
+fn set_autostart(on: bool) -> Result<(), String> {
+    let path = autostart_path().ok_or("cannot find the autostart folder")?;
+    if on {
+        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let entry = format!(
+            "[Desktop Entry]\nType=Application\nName=Hush\nComment=Microphone noise suppression\nExec=\"{}\" --hidden\nIcon=io.github.bxnnyg.Hush\nTerminal=false\nX-GNOME-Autostart-enabled=true\n",
+            exe.display()
+        );
+        std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
+        std::fs::write(&path, entry).map_err(|e| e.to_string())
+    } else {
+        match std::fs::remove_file(&path) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+
+fn autostart_path() -> Option<PathBuf> {
+    let base = std::env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))?;
+    Some(base.join("autostart").join("io.github.bxnnyg.Hush.desktop"))
+}
+
+/// Open the project page in the default browser. The URL is fixed on purpose: the UI cannot
+/// make this command open anything else.
+#[tauri::command]
+fn open_repo() -> Result<(), String> {
+    std::process::Command::new("xdg-open")
+        .arg("https://github.com/BxnnyG/hush")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn quit_app(app: AppHandle, shared: Shared<'_>) -> Result<(), String> {
+    quit_everything(&app, &shared).await;
+    Ok(())
+}
+
+/// Stop the daemon as well, then exit.
+pub async fn quit_everything(app: &AppHandle, shared: &Arc<App>) {
+    let _ = shared.bus.call("Quit", &()).await;
+    app.exit(0);
+}
+
+pub fn show_main_window(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
+    if let Some(shared) = app.try_state::<Arc<App>>() {
+        let shared = shared.inner().clone();
+        tauri::async_runtime::spawn(async move {
+            let _ = shared.bus.call("SetWatching", &(true,)).await;
+        });
+    }
+}
+
+fn run_in_background(app: &AppHandle) -> bool {
+    app.try_state::<Arc<App>>()
+        .and_then(|s| {
+            s.last.lock().ok().and_then(|l| {
+                l.as_ref()
+                    .and_then(|v| v["settings"]["run_in_background"].as_bool())
+            })
+        })
+        .unwrap_or(true)
+}
+
+fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    // WebKitGTK's DMABUF renderer aborts with a Wayland protocol error on several GPU/driver
+    // combinations (notably NVIDIA). The software path is plenty fast for this UI.
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+    let hidden = std::env::args().any(|a| a == "--hidden");
+
+    tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main_window(app)
+        }))
+        .setup(move |app| {
+            let bus = tauri::async_runtime::block_on(Bus::connect())
+                .map_err(|e| format!("cannot reach the session bus: {e}"))?;
+            let shared = Arc::new(App {
+                bus,
+                last: Mutex::new(None),
+                tray: Mutex::new(None),
+            });
+            app.manage(shared.clone());
+            tray::build(app.handle(), &shared)?;
+            bus::spawn_watcher(app.handle().clone(), shared.clone());
+            if hidden {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.hide();
+                }
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                let app = window.app_handle().clone();
+                if run_in_background(&app) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                    if let Some(shared) = app.try_state::<Arc<App>>() {
+                        let shared = shared.inner().clone();
+                        tauri::async_runtime::spawn(async move {
+                            let _ = shared.bus.call("SetMonitor", &(false,)).await;
+                            let _ = shared.bus.call("SetWatching", &(false,)).await;
+                        });
+                    }
+                } else {
+                    api.prevent_close();
+                    if let Some(shared) = app.try_state::<Arc<App>>() {
+                        let shared = shared.inner().clone();
+                        tauri::async_runtime::spawn(
+                            async move { quit_everything(&app, &shared).await },
+                        );
+                    }
+                }
+            }
+        })
+        .invoke_handler(tauri::generate_handler![
+            get_state,
+            apply,
+            set_profile,
+            set_monitor,
+            set_ab_original,
+            set_watching,
+            start_daemon,
+            set_autostart,
+            open_repo,
+            quit_app
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running Hush");
+}

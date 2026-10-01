@@ -1,0 +1,81 @@
+// Mirrors crates/hush-core/src/ipc.rs, settings.rs and studio.rs.
+
+export type Status = 'off' | 'starting' | 'running' | 'mic_missing' | 'no_pipewire' | 'error';
+export type Strength = 'light' | 'medium' | 'high' | 'max';
+export type Preset = 'off' | 'natural' | 'clear' | 'warm' | 'custom';
+export type ProfileKind = 'voice' | 'studio' | 'stereo' | 'headset' | 'music' | 'off' | 'other';
+export type DeviceKind = 'usb' | 'builtin' | 'bluetooth' | 'headset' | 'webcam' | 'loopback' | 'other';
+
+export interface StudioParams {
+  lowcut_hz: number;
+  warmth_db: number;
+  presence_db: number;
+  air_db: number;
+  deess: number;
+  compression: number;
+  gate: number;
+  limiter: boolean;
+}
+
+export interface Settings {
+  enabled: boolean;
+  mic: string | null;
+  set_default: boolean;
+  autostart: boolean;
+  run_in_background: boolean;
+  show_all_devices: boolean;
+  noise: { enabled: boolean; strength: Strength };
+  echo: { enabled: boolean };
+  studio: { preset: Preset; custom: StudioParams };
+}
+
+export interface ProfileInfo {
+  index: number;
+  name: string;
+  description: string;
+  kind: ProfileKind;
+  available: boolean;
+  priority: number;
+}
+
+export interface Device {
+  id: string;
+  node_id: number;
+  name: string;
+  kind: DeviceKind;
+  card: number | null;
+  profile: ProfileInfo | null;
+}
+
+export interface ProfileHint {
+  card: number;
+  device_id: string;
+  device_name: string;
+  current: ProfileInfo;
+  suggested: ProfileInfo;
+}
+
+export interface HushState {
+  version: string;
+  status: Status;
+  error: string | null;
+  settings: Settings;
+  devices: Device[];
+  hidden_devices: Device[];
+  active_mic: string | null;
+  profile_hint: ProfileHint | null;
+  latency_ms: number | null;
+  default_is_hush: boolean;
+  monitoring: boolean;
+  ab_original: boolean;
+  echo_available: boolean;
+  presets: Record<string, StudioParams>;
+}
+
+export interface Levels {
+  input_db: number;
+  output_db: number;
+}
+
+/** Deep partial used for settings patches. */
+export type Patch<T> = { [K in keyof T]?: T[K] extends object ? Patch<T[K]> : T[K] };

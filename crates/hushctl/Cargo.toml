@@ -1,0 +1,14 @@
+[package]
+name = "hushctl"
+description = "Command line control for the Hush daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+hush-core = { path = "../hush-core" }
+anyhow.workspace = true
+serde_json = "1"
+zbus = "5"

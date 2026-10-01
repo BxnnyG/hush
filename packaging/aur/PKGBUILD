@@ -1,0 +1,46 @@
+# Maintainer: BxnnyG (https://github.com/BxnnyG)
+pkgname=bxy-hush
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Virtual microphone with AI noise suppression (DeepFilterNet) for PipeWire'
+arch=('x86_64')
+url='https://github.com/BxnnyG/hush'
+license=('GPL-3.0-or-later')
+depends=('pipewire' 'wireplumber' 'webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'webrtc-audio-processing-2')
+makedepends=('rust' 'clang' 'nodejs' 'npm' 'git')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "hush-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  (cd ui && npm ci --no-audit --no-fund)
+}
+
+build() {
+  cd "hush-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  (cd ui && npm run build)
+  cargo build --frozen --release --workspace
+}
+
+check() {
+  cd "hush-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo test --frozen --release --workspace
+}
+
+package() {
+  cd "hush-$pkgver"
+  install -Dm755 target/release/hushd   "$pkgdir/usr/bin/hushd"
+  install -Dm755 target/release/hushctl "$pkgdir/usr/bin/hushctl"
+  install -Dm755 target/release/hush    "$pkgdir/usr/bin/hush"
+  install -Dm644 dist/io.github.bxnnyg.Hush.desktop  "$pkgdir/usr/share/applications/io.github.bxnnyg.Hush.desktop"
+  install -Dm644 dist/io.github.bxnnyg.Hush.service  "$pkgdir/usr/share/dbus-1/services/io.github.bxnnyg.Hush.service"
+  install -Dm644 dist/hushd.service                  "$pkgdir/usr/lib/systemd/user/hushd.service"
+  install -Dm644 assets/hush.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/io.github.bxnnyg.Hush.svg"
+  install -Dm644 ui/src-tauri/icons/128x128.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/io.github.bxnnyg.Hush.png"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

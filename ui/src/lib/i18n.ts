@@ -1,0 +1,185 @@
+// Tiny i18n: German and English, picked from the system locale. No technical jargon in the
+// default view (no RNNoise, LADSPA, sink/source).
+
+type Dict = Record<string, string>;
+
+const en: Dict = {
+  'app.title': 'Hush',
+  'status.off': 'Paused',
+  'status.starting': 'Starting…',
+  'status.running': 'Hush Mic active',
+  'status.mic_missing': 'Microphone disconnected',
+  'status.no_pipewire': 'Audio system not reachable',
+  'status.error': 'Something went wrong',
+  'status.no_daemon': 'Hush is not running',
+
+  'mic.title': 'Microphone',
+  'mic.auto': 'System default',
+  'mic.none': 'No microphone found',
+  'mic.show_all': 'Show all devices',
+  'meter.mic': 'Microphone',
+  'meter.out': 'What others hear',
+
+  'noise.title': 'Noise suppression',
+  'noise.sub': 'Removes keyboard, fans and background voices.',
+  'noise.strength': 'Strength',
+  'strength.light': 'Light',
+  'strength.medium': 'Medium',
+  'strength.high': 'High',
+  'strength.max': 'Maximum',
+
+  'echo.title': 'Echo suppression',
+  'echo.sub': 'Only needed with speakers instead of headphones. Experimental: it needs a few seconds to adapt.',
+  'echo.soon': 'Not available',
+
+  'studio.title': 'Studio sound',
+  'studio.sub': 'Makes your voice fuller and clearer.',
+  'preset.off': 'Off',
+  'preset.natural': 'Natural',
+  'preset.clear': 'Clear',
+  'preset.warm': 'Warm',
+  'preset.custom': 'Custom',
+  'studio.advanced': 'Advanced',
+  'adv.lowcut': 'Rumble filter',
+  'adv.warmth': 'Warmth',
+  'adv.presence': 'Presence',
+  'adv.air': 'Brightness',
+  'adv.deess': 'Soften "s" sounds',
+  'adv.compression': 'Even out volume',
+  'adv.gate': 'Mute between words',
+  'adv.limiter': 'Prevent clipping',
+  'adv.off': 'Off',
+
+  'test.title': 'Test',
+  'test.listen': 'Hear myself',
+  'test.listen_sub': 'Use headphones. With speakers you will get feedback.',
+  'test.ab': 'Hold to hear the original',
+  'test.ab_sub': 'Release to hear the processed sound.',
+  'test.ab_original': 'Original',
+  'test.ab_processed': 'Processed',
+
+  'profile.title': 'Your microphone is in studio mode',
+  'profile.body': '{name} is set up for multichannel studio use. For calls, a voice profile works better.',
+  'profile.fix': 'Switch to voice mode',
+  'profile.fixing': 'Switching…',
+
+  'footer.pick': 'In your apps, choose',
+  'footer.latency': 'Added delay about {ms} ms',
+  'footer.copy': 'Copy name',
+  'footer.copied': 'Copied',
+  'footer.credit': 'Hush by BxnnyG',
+  'footer.license': 'Free software (GPL-3.0)',
+
+  'settings.title': 'Settings',
+  'settings.enabled': 'Hush is on',
+  'settings.default': 'Use as default microphone',
+  'settings.default_sub': 'Apps pick Hush Mic automatically. The previous default is restored when Hush stops.',
+  'settings.autostart': 'Start with the computer',
+  'settings.background': 'Keep running in the background when closed',
+  'settings.version': 'Version {v}',
+  'settings.quit': 'Quit Hush completely',
+  'settings.close': 'Done',
+
+  'error.title': 'Details',
+  'error.retry': 'Hush retries automatically.',
+  'error.nodaemon': 'The Hush background service is not running.',
+  'error.start': 'Start Hush',
+  'error.nopw': 'Hush cannot reach the audio system (PipeWire). Is it running?',
+  'error.micmissing': 'Plug your microphone back in. Hush continues automatically.',
+};
+
+const de: Dict = {
+  'app.title': 'Hush',
+  'status.off': 'Pausiert',
+  'status.starting': 'Startet…',
+  'status.running': 'Hush Mic aktiv',
+  'status.mic_missing': 'Mikrofon getrennt',
+  'status.no_pipewire': 'Audiosystem nicht erreichbar',
+  'status.error': 'Etwas ist schiefgelaufen',
+  'status.no_daemon': 'Hush läuft nicht',
+
+  'mic.title': 'Mikrofon',
+  'mic.auto': 'Systemstandard',
+  'mic.none': 'Kein Mikrofon gefunden',
+  'mic.show_all': 'Alle Geräte anzeigen',
+  'meter.mic': 'Mikrofon',
+  'meter.out': 'Was die anderen hören',
+
+  'noise.title': 'Rauschunterdrückung',
+  'noise.sub': 'Entfernt Tastatur, Lüfter und Stimmen im Hintergrund.',
+  'noise.strength': 'Stärke',
+  'strength.light': 'Leicht',
+  'strength.medium': 'Mittel',
+  'strength.high': 'Hoch',
+  'strength.max': 'Maximal',
+
+  'echo.title': 'Echo-Unterdrückung',
+  'echo.sub': 'Nur nötig, wenn du Lautsprecher statt Kopfhörer nutzt. Experimentell: braucht ein paar Sekunden, um sich einzustellen.',
+  'echo.soon': 'Nicht verfügbar',
+
+  'studio.title': 'Studio-Sound',
+  'studio.sub': 'Macht deine Stimme voller und klarer.',
+  'preset.off': 'Aus',
+  'preset.natural': 'Natürlich',
+  'preset.clear': 'Klar',
+  'preset.warm': 'Warm',
+  'preset.custom': 'Eigene',
+  'studio.advanced': 'Erweitert',
+  'adv.lowcut': 'Rumpelfilter',
+  'adv.warmth': 'Wärme',
+  'adv.presence': 'Präsenz',
+  'adv.air': 'Brillanz',
+  'adv.deess': '„S“-Laute abschwächen',
+  'adv.compression': 'Lautstärke angleichen',
+  'adv.gate': 'Zwischen Wörtern stummschalten',
+  'adv.limiter': 'Übersteuern verhindern',
+  'adv.off': 'Aus',
+
+  'test.title': 'Test',
+  'test.listen': 'Mich selbst hören',
+  'test.listen_sub': 'Mit Kopfhörern nutzen. Mit Lautsprechern gibt es Rückkopplung.',
+  'test.ab': 'Halten für das Original',
+  'test.ab_sub': 'Loslassen schaltet auf den bearbeiteten Ton.',
+  'test.ab_original': 'Original',
+  'test.ab_processed': 'Bearbeitet',
+
+  'profile.title': 'Dein Mikrofon läuft im Studio-Modus',
+  'profile.body': '{name} ist für Mehrkanal-Studiobetrieb eingestellt. Für Calls funktioniert ein Sprach-Profil besser.',
+  'profile.fix': 'Auf Sprache umstellen',
+  'profile.fixing': 'Stelle um…',
+
+  'footer.pick': 'In deinen Apps wählen',
+  'footer.latency': 'Zusätzliche Verzögerung ca. {ms} ms',
+  'footer.copy': 'Namen kopieren',
+  'footer.copied': 'Kopiert',
+  'footer.credit': 'Hush von BxnnyG',
+  'footer.license': 'Freie Software (GPL-3.0)',
+
+  'settings.title': 'Einstellungen',
+  'settings.enabled': 'Hush ist an',
+  'settings.default': 'Als Standard-Mikrofon verwenden',
+  'settings.default_sub': 'Apps wählen Hush Mic automatisch. Der bisherige Standard kommt zurück, wenn Hush beendet wird.',
+  'settings.autostart': 'Mit dem Computer starten',
+  'settings.background': 'Beim Schließen im Hintergrund weiterlaufen',
+  'settings.version': 'Version {v}',
+  'settings.quit': 'Hush komplett beenden',
+  'settings.close': 'Fertig',
+
+  'error.title': 'Details',
+  'error.retry': 'Hush versucht es automatisch erneut.',
+  'error.nodaemon': 'Der Hush-Hintergrunddienst läuft nicht.',
+  'error.start': 'Hush starten',
+  'error.nopw': 'Hush erreicht das Audiosystem (PipeWire) nicht. Läuft es?',
+  'error.micmissing': 'Steck dein Mikrofon wieder ein. Hush macht automatisch weiter.',
+};
+
+const lang = (typeof navigator !== 'undefined' ? navigator.language : 'en').toLowerCase().startsWith('de') ? 'de' : 'en';
+const dict = lang === 'de' ? de : en;
+
+export function t(key: string, vars?: Record<string, string | number>): string {
+  let s = dict[key] ?? en[key] ?? key;
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(`{${k}}`, String(v));
+  return s;
+}
+
+export const language = lang;

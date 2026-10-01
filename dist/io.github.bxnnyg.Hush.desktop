@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Hush
+GenericName=Microphone noise suppression
+GenericName[de]=Mikrofon-Rauschunterdrückung
+Comment=Clean microphone audio for calls with one switch
+Comment[de]=Sauberer Mikrofonton für Calls mit einem Schalter
+Exec=hush
+Icon=io.github.bxnnyg.Hush
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=microphone;noise;krisp;rnnoise;pipewire;mikrofon;rauschen;
+StartupWMClass=hush

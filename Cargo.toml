@@ -1,0 +1,38 @@
+[workspace]
+resolver = "2"
+members = ["crates/hush-core", "crates/hushd", "crates/hushctl", "ui/src-tauri"]
+default-members = ["crates/hush-core", "crates/hushd", "crates/hushctl", "ui/src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/BxnnyG/hush"
+rust-version = "1.80"
+
+[workspace.dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+log = "0.4"
+env_logger = "0.11"
+thiserror = "2"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+debug = false
+
+# DeepFilterNet (tract) is unusably slow in debug builds; keep tests usable.
+[profile.dev.package."*"]
+opt-level = 3
+[profile.dev.package.hush-core]
+opt-level = 3
+
+# Faster profile for local iteration: optimised (the model needs it) but no LTO.
+[profile.fast]
+inherits = "release"
+lto = false
+codegen-units = 16
+incremental = true
