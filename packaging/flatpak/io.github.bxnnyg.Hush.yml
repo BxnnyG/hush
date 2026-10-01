@@ -44,7 +44,7 @@ modules:
     build-commands:
       - cd ui && npm ci --no-audit --no-fund && npm run build
       - cargo build --release --workspace --features hushd/echo-bundled
-      - packaging/stage.sh /app /app target/release
+      - packaging/stage.sh / /app target/release
     sources:
       - type: dir
         path: ../..
