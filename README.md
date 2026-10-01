@@ -48,6 +48,14 @@ as AUR account registration is open again. Until then:
 `git clone https://github.com/BxnnyG/hush && cd hush/packaging/aur && makepkg -si`
 (this downloads the release tarball of the tag in the PKGBUILD).
 
+### Arch from a checkout
+
+```sh
+git clone https://github.com/BxnnyG/hush && cd hush
+packaging/install-arch.sh        # builds a real pacman package and installs it (sudo)
+# later: sudo pacman -R bxy-hush
+```
+
 ### From source
 
 You need `rust`, `clang`, `nodejs`, `npm`, `pipewire`, `webkit2gtk-4.1`, `libayatana-appindicator` and
