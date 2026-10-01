@@ -42,7 +42,7 @@
 
   async function copyName() {
     try {
-      await navigator.clipboard.writeText('Hush Mic');
+      await navigator.clipboard.writeText('Sordino Mic');
       copied = true;
       setTimeout(() => (copied = false), 1500);
     } catch {
@@ -175,7 +175,7 @@
 
     <footer>
       <div>
-        {t('footer.pick')}: <button class="name" onclick={copyName} title={t('footer.copy')}>Hush Mic</button>
+        {t('footer.pick')}: <button class="name" onclick={copyName} title={t('footer.copy')}>Sordino Mic</button>
         {#if copied}<span class="copied">{t('footer.copied')}</span>{/if}
       </div>
       {#if s.latency_ms !== null}<div class="lat">{t('footer.latency', { ms: Math.round(s.latency_ms) })}</div>{/if}
@@ -183,7 +183,7 @@
   {/if}
 
   <div class="credit">
-    <button onclick={() => api.openRepo()} title="https://github.com/BxnnyG/hush">{t('footer.credit')} · github.com/BxnnyG/hush</button>
+    <button onclick={() => api.openRepo()} title="https://github.com/BxnnyG/sordino">{t('footer.credit')} · github.com/BxnnyG/sordino</button>
     <span>{t('footer.license')}</span>
   </div>
 </main>

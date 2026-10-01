@@ -1810,74 +1810,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 
 [[package]]
-name = "hush-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "deep_filter",
- "env_logger",
- "log",
- "ndarray",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "toml 0.8.23",
- "tract-core",
- "tract-data",
- "tract-hir",
- "tract-linalg",
- "tract-nnef",
- "tract-onnx",
- "tract-onnx-opl",
- "tract-pulse",
- "tract-pulse-opl",
- "webrtc-audio-processing",
- "webrtc-audio-processing-config",
-]
-
-[[package]]
-name = "hush-ui"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "futures-util",
- "hush-core",
- "log",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-single-instance",
- "tokio",
- "zbus",
-]
-
-[[package]]
-name = "hushctl"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "hush-core",
- "serde_json",
- "zbus",
-]
-
-[[package]]
-name = "hushd"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "env_logger",
- "hush-core",
- "log",
- "pipewire",
- "ringbuf",
- "serde",
- "serde_json",
- "zbus",
-]
-
-[[package]]
 name = "hyper"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4045,6 +3977,74 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "sordino-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "deep_filter",
+ "env_logger",
+ "log",
+ "ndarray",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "toml 0.8.23",
+ "tract-core",
+ "tract-data",
+ "tract-hir",
+ "tract-linalg",
+ "tract-nnef",
+ "tract-onnx",
+ "tract-onnx-opl",
+ "tract-pulse",
+ "tract-pulse-opl",
+ "webrtc-audio-processing",
+ "webrtc-audio-processing-config",
+]
+
+[[package]]
+name = "sordino-ui"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "futures-util",
+ "log",
+ "serde",
+ "serde_json",
+ "sordino-core",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-single-instance",
+ "tokio",
+ "zbus",
+]
+
+[[package]]
+name = "sordinoctl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde_json",
+ "sordino-core",
+ "zbus",
+]
+
+[[package]]
+name = "sordinod"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "log",
+ "pipewire",
+ "ringbuf",
+ "serde",
+ "serde_json",
+ "sordino-core",
+ "zbus",
 ]
 
 [[package]]

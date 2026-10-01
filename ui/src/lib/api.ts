@@ -1,10 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { HushState, Levels, Patch, Settings } from './types';
+import type { SordinoState, Levels, Patch, Settings } from './types';
 
-/** Thin wrapper over the Tauri commands, which in turn talk to hushd over D-Bus. */
+/** Thin wrapper over the Tauri commands, which in turn talk to sordinod over D-Bus. */
 export const api = {
-  getState: () => invoke<HushState>('get_state'),
+  getState: () => invoke<SordinoState>('get_state'),
   apply: (patch: Patch<Settings>) => invoke<void>('apply', { patch: JSON.stringify(patch) }),
   setProfile: (card: number, index: number) => invoke<void>('set_profile', { card, index }),
   setMonitor: (on: boolean) => invoke<void>('set_monitor', { on }),
@@ -16,12 +16,12 @@ export const api = {
   openRepo: () => invoke<void>('open_repo'),
 };
 
-export function onState(cb: (s: HushState) => void) {
-  return listen<HushState>('hush://state', (e) => cb(e.payload));
+export function onState(cb: (s: SordinoState) => void) {
+  return listen<SordinoState>('sordino://state', (e) => cb(e.payload));
 }
 export function onLevels(cb: (l: Levels) => void) {
-  return listen<Levels>('hush://levels', (e) => cb(e.payload));
+  return listen<Levels>('sordino://levels', (e) => cb(e.payload));
 }
 export function onDaemon(cb: (up: boolean) => void) {
-  return listen<boolean>('hush://daemon', (e) => cb(e.payload));
+  return listen<boolean>('sordino://daemon', (e) => cb(e.payload));
 }

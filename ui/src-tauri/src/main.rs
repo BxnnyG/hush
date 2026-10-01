@@ -1,6 +1,6 @@
-//! Hush desktop app: a thin Tauri shell around the daemon's D-Bus API.
+//! Sordino desktop app: a thin Tauri shell around the daemon's D-Bus API.
 //!
-//! All audio logic lives in `hushd`. This process only shows state, forwards commands, owns the
+//! All audio logic lives in `sordinod`. This process only shows state, forwards commands, owns the
 //! tray icon and the autostart entry.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -69,7 +69,7 @@ fn set_autostart(on: bool) -> Result<(), String> {
     if on {
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
         let entry = format!(
-            "[Desktop Entry]\nType=Application\nName=Hush\nComment=Microphone noise suppression\nExec=\"{}\" --hidden\nIcon=io.github.bxnnyg.Hush\nTerminal=false\nX-GNOME-Autostart-enabled=true\n",
+            "[Desktop Entry]\nType=Application\nName=Sordino\nComment=Microphone noise suppression\nExec=\"{}\" --hidden\nIcon=io.github.bxnnyg.Sordino\nTerminal=false\nX-GNOME-Autostart-enabled=true\n",
             exe.display()
         );
         std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
@@ -88,7 +88,10 @@ fn autostart_path() -> Option<PathBuf> {
         .map(PathBuf::from)
         .filter(|p| p.is_absolute())
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))?;
-    Some(base.join("autostart").join("io.github.bxnnyg.Hush.desktop"))
+    Some(
+        base.join("autostart")
+            .join("io.github.bxnnyg.Sordino.desktop"),
+    )
 }
 
 /// Open the project page in the default browser. The URL is fixed on purpose: the UI cannot
@@ -96,7 +99,7 @@ fn autostart_path() -> Option<PathBuf> {
 #[tauri::command]
 fn open_repo() -> Result<(), String> {
     std::process::Command::new("xdg-open")
-        .arg("https://github.com/BxnnyG/hush")
+        .arg("https://github.com/BxnnyG/sordino")
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -132,7 +135,7 @@ pub fn show_main_window(app: &AppHandle) {
 }
 
 /// Is there a tray that can bring the window back? Without one (e.g. GNOME without the
-/// AppIndicator extension) hiding the window would make Hush unreachable.
+/// AppIndicator extension) hiding the window would make Sordino unreachable.
 fn tray_available(shared: &Arc<App>) -> bool {
     tauri::async_runtime::block_on(shared.bus.name_has_owner("org.kde.StatusNotifierWatcher"))
 }
@@ -170,7 +173,7 @@ fn main() {
                 tray: Mutex::new(None),
             });
             app.manage(shared.clone());
-            // The tray is a convenience: if it cannot be built, Hush still works without it.
+            // The tray is a convenience: if it cannot be built, Sordino still works without it.
             if let Err(e) = tray::build(app.handle(), &shared) {
                 log::warn!("no tray icon: {e}");
             }
@@ -232,5 +235,5 @@ fn main() {
             quit_app
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Hush");
+        .expect("error while running Sordino");
 }

@@ -1,0 +1,15 @@
+[Unit]
+Description=Sordino daemon (virtual microphone with noise suppression)
+Documentation=https://github.com/BxnnyG/sordino
+After=pipewire.service wireplumber.service
+Wants=pipewire.service
+
+[Service]
+Type=dbus
+BusName=io.github.bxnnyg.Sordino
+ExecStart=/usr/bin/sordinod
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -1,28 +1,31 @@
 # Maintainer: BxnnyG (https://github.com/BxnnyG)
-pkgname=bxy-hush
+pkgname=bxy-sordino
 pkgver=0.1.0
 pkgrel=1
 pkgdesc='Virtual microphone with AI noise suppression (DeepFilterNet) and echo suppression for PipeWire'
 arch=('x86_64')
-url='https://github.com/BxnnyG/hush'
+url='https://github.com/BxnnyG/sordino'
 license=('GPL-3.0-or-later')
 depends=('pipewire' 'wireplumber' 'webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'webrtc-audio-processing' 'xdg-utils')
 makedepends=('rust' 'clang' 'nodejs' 'npm' 'git')
 # makepkg's default -flto makes the C++ part of WebRTC unreadable for Rust's linker.
+# The project was briefly called Hush; replace a locally installed bxy-hush.
+conflicts=('bxy-hush')
+replaces=('bxy-hush')
 options=('!debug' '!lto')
-# HUSH_SOURCE_URL lets CI build from a local checkout (file:///...) instead of the release tag.
-source=("$pkgname-$pkgver.tar.gz::${HUSH_SOURCE_URL:-$url/archive/v$pkgver.tar.gz}")
+# SORDINO_SOURCE_URL lets CI build from a local checkout (file:///...) instead of the release tag.
+source=("$pkgname-$pkgver.tar.gz::${SORDINO_SOURCE_URL:-$url/archive/v$pkgver.tar.gz}")
 sha256sums=('SKIP')
 
 prepare() {
-  cd "hush-$pkgver"
+  cd "sordino-$pkgver"
   export RUSTUP_TOOLCHAIN=stable
   cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
   (cd ui && npm ci --no-audit --no-fund)
 }
 
 build() {
-  cd "hush-$pkgver"
+  cd "sordino-$pkgver"
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR=target
   (cd ui && npm run build)
@@ -30,12 +33,12 @@ build() {
 }
 
 check() {
-  cd "hush-$pkgver"
+  cd "sordino-$pkgver"
   export RUSTUP_TOOLCHAIN=stable
   cargo test --frozen --release --workspace
 }
 
 package() {
-  cd "hush-$pkgver"
+  cd "sordino-$pkgver"
   ./packaging/stage.sh "$pkgdir" /usr target/release
 }

@@ -6,3 +6,5 @@
 .claude/
 /ui/src-tauri/gen
 target-bundled/
+recordings/
+*.wav

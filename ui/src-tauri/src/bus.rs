@@ -1,13 +1,13 @@
-//! D-Bus client for the Hush daemon.
+//! D-Bus client for the Sordino daemon.
 
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
 
 use futures_util::StreamExt;
-use hush_core::{DBUS_IFACE, DBUS_NAME, DBUS_PATH};
 use serde::Serialize;
 use serde_json::Value;
+use sordino_core::{DBUS_IFACE, DBUS_NAME, DBUS_PATH};
 use tauri::{AppHandle, Emitter};
 use zbus::zvariant::DynamicType;
 use zbus::{Connection, MatchRule, MessageStream};
@@ -90,12 +90,12 @@ impl Bus {
         }
         let beside = std::env::current_exe()
             .ok()
-            .and_then(|e| e.parent().map(|d| d.join("hushd")));
+            .and_then(|e| e.parent().map(|d| d.join("sordinod")));
         let candidates = beside
             .into_iter()
             .filter(|p| p.exists())
-            .chain(std::iter::once("hushd".into()));
-        let mut last_err = String::from("hushd not found");
+            .chain(std::iter::once("sordinod".into()));
+        let mut last_err = String::from("sordinod not found");
         for exe in candidates {
             let mut cmd = Command::new(&exe);
             cmd.stdin(Stdio::null())
@@ -119,13 +119,13 @@ async fn wait_for_daemon(bus: &Bus) -> Result<(), String> {
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    Err("the Hush daemon did not start".into())
+    Err("the Sordino daemon did not start".into())
 }
 
 /// Forward daemon signals and daemon presence to the frontend and the tray.
 pub fn spawn_watcher(app: AppHandle, shared: Arc<App>) {
     tauri::async_runtime::spawn(async move {
-        // Make sure a daemon exists; failures show up in the UI as "Hush is not running".
+        // Make sure a daemon exists; failures show up in the UI as "Sordino is not running".
         if !shared.bus.daemon_running().await {
             if let Err(e) = shared.bus.start_daemon().await {
                 log::warn!("could not start the daemon: {e}");
@@ -143,7 +143,7 @@ pub fn spawn_watcher(app: AppHandle, shared: Arc<App>) {
 async fn push_state(app: &AppHandle, shared: &Arc<App>, state: Value) {
     *shared.last.lock().unwrap() = Some(state.clone());
     crate::tray::refresh(app, shared);
-    let _ = app.emit("hush://state", state);
+    let _ = app.emit("sordino://state", state);
 }
 
 async fn watch(app: &AppHandle, shared: &Arc<App>) -> zbus::Result<()> {
@@ -160,7 +160,7 @@ async fn watch(app: &AppHandle, shared: &Arc<App>) -> zbus::Result<()> {
 
     // Initial state, if the daemon is already up.
     let up = shared.bus.daemon_running().await;
-    let _ = app.emit("hush://daemon", up);
+    let _ = app.emit("sordino://daemon", up);
     if up {
         if let Ok(state) = shared.bus.get_state().await {
             push_state(app, shared, state).await;
@@ -182,7 +182,7 @@ async fn watch(app: &AppHandle, shared: &Arc<App>) -> zbus::Result<()> {
                     }
                     Some("Levels") => {
                         if let Ok((i, o)) = msg.body().deserialize::<(f64, f64)>() {
-                            let _ = app.emit("hush://levels", serde_json::json!({ "input_db": i, "output_db": o }));
+                            let _ = app.emit("sordino://levels", serde_json::json!({ "input_db": i, "output_db": o }));
                         }
                     }
                     _ => {}
@@ -194,7 +194,7 @@ async fn watch(app: &AppHandle, shared: &Arc<App>) -> zbus::Result<()> {
                     continue;
                 }
                 let up = args.new_owner().is_some();
-                let _ = app.emit("hush://daemon", up);
+                let _ = app.emit("sordino://daemon", up);
                 if up {
                     tokio::time::sleep(Duration::from_millis(200)).await;
                     if let Ok(state) = shared.bus.get_state().await {

@@ -1,4 +1,4 @@
-// Mirrors crates/hush-core/src/ipc.rs, settings.rs and studio.rs.
+// Mirrors crates/sordino-core/src/ipc.rs, settings.rs and studio.rs.
 
 export type Status = 'off' | 'starting' | 'running' | 'mic_missing' | 'no_pipewire' | 'error';
 export type Strength = 'light' | 'medium' | 'high' | 'max';
@@ -55,7 +55,7 @@ export interface ProfileHint {
   suggested: ProfileInfo;
 }
 
-export interface HushState {
+export interface SordinoState {
   version: string;
   status: Status;
   error: string | null;
@@ -65,7 +65,7 @@ export interface HushState {
   active_mic: string | null;
   profile_hint: ProfileHint | null;
   latency_ms: number | null;
-  default_is_hush: boolean;
+  default_is_sordino: boolean;
   monitoring: boolean;
   ab_original: boolean;
   echo_available: boolean;

@@ -35,21 +35,21 @@ pub fn build(app: &AppHandle, shared: &Arc<App>) -> tauri::Result<()> {
     let status = MenuItem::with_id(
         app,
         "status",
-        tr("Hush startet…", "Hush is starting…"),
+        tr("Sordino startet…", "Sordino is starting…"),
         false,
         None::<&str>,
     )?;
     let open = MenuItem::with_id(
         app,
         "open",
-        tr("Hush öffnen", "Open Hush"),
+        tr("Sordino öffnen", "Open Sordino"),
         true,
         None::<&str>,
     )?;
     let enabled = CheckMenuItem::with_id(
         app,
         "enabled",
-        tr("Hush Mic aktiv", "Hush Mic active"),
+        tr("Sordino Mic aktiv", "Sordino Mic active"),
         true,
         true,
         None::<&str>,
@@ -65,7 +65,7 @@ pub fn build(app: &AppHandle, shared: &Arc<App>) -> tauri::Result<()> {
     let quit = MenuItem::with_id(
         app,
         "quit",
-        tr("Hush beenden", "Quit Hush"),
+        tr("Sordino beenden", "Quit Sordino"),
         true,
         None::<&str>,
     )?;
@@ -89,9 +89,9 @@ pub fn build(app: &AppHandle, shared: &Arc<App>) -> tauri::Result<()> {
     });
 
     let icon = Image::from_bytes(include_bytes!("../icons/128x128.png"))?;
-    TrayIconBuilder::with_id("hush")
+    TrayIconBuilder::with_id("sordino")
         .icon(icon)
-        .tooltip("Hush")
+        .tooltip("Sordino")
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| {
@@ -131,7 +131,7 @@ pub fn refresh(_app: &AppHandle, shared: &Arc<App>) {
     let Some(state) = state else {
         let _ = items
             .status
-            .set_text(tr("Hush läuft nicht", "Hush is not running"));
+            .set_text(tr("Sordino läuft nicht", "Sordino is not running"));
         let _ = items.enabled.set_enabled(false);
         let _ = items.noise.set_enabled(false);
         return;
@@ -147,7 +147,7 @@ pub fn refresh(_app: &AppHandle, shared: &Arc<App>) {
             .unwrap_or(true),
     );
     let text = match state["status"].as_str().unwrap_or("") {
-        "running" => tr("Hush Mic aktiv", "Hush Mic active"),
+        "running" => tr("Sordino Mic aktiv", "Sordino Mic active"),
         "off" => tr("Pausiert", "Paused"),
         "mic_missing" => tr("Mikrofon getrennt", "Microphone disconnected"),
         "no_pipewire" => tr("Audiosystem nicht erreichbar", "Audio system not reachable"),

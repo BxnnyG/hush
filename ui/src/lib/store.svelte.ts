@@ -1,9 +1,9 @@
 import { api, onDaemon, onLevels, onState } from './api';
-import type { HushState, Levels, Patch, Settings } from './types';
+import type { SordinoState, Levels, Patch, Settings } from './types';
 
 /** Reactive app state shared by all components (Svelte 5 runes). */
 class Store {
-  state = $state<HushState | null>(null);
+  state = $state<SordinoState | null>(null);
   levels = $state<Levels>({ input_db: -100, output_db: -100 });
   daemonUp = $state(true);
   busy = $state(false);

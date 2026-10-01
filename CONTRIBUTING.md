@@ -6,9 +6,9 @@ Thanks for helping. A few notes that save everybody time.
 
 | Path | What |
 |---|---|
-| `crates/hush-core` | Settings, DSP chain, DeepFilterNet wrapper, echo canceller. No PipeWire, no D-Bus. |
-| `crates/hushd` | The daemon: PipeWire client, DSP worker thread, D-Bus API. |
-| `crates/hushctl` | Command line client. |
+| `crates/sordino-core` | Settings, DSP chain, DeepFilterNet wrapper, echo canceller. No PipeWire, no D-Bus. |
+| `crates/sordinod` | The daemon: PipeWire client, DSP worker thread, D-Bus API. |
+| `crates/sordinoctl` | Command line client. |
 | `ui/` | Svelte frontend, `ui/src-tauri` is the Tauri shell. |
 | `dist/` | Desktop file, D-Bus activation file, systemd user unit. |
 | `packaging/aur` | PKGBUILD. |
@@ -24,9 +24,9 @@ cargo test --release --workspace
 Use `--release` for anything that loads the model: DeepFilterNet's graph optimiser trips over
 debug assertions. `cargo build --profile fast` is a quicker optimised profile (no LTO) for iteration.
 
-## Rules that keep Hush from breaking your audio
+## Rules that keep Sordino from breaking your audio
 
-* Hush never writes PipeWire configuration. Everything is a normal PipeWire client object.
+* Sordino never writes PipeWire configuration. Everything is a normal PipeWire client object.
 * No allocation, locking or model inference in PipeWire's real-time callbacks. They only copy
   samples into ring buffers; the DSP runs on its own thread.
 * Every error that can happen in the chain must end up as a readable message in the UI.

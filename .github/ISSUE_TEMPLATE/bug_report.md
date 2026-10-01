@@ -13,10 +13,10 @@ labels: bug
 **Environment**
 - Distro:
 - PipeWire / WirePlumber versions (`pipewire --version`, `wireplumber --version`):
-- Hush version (`hushctl status`):
+- Sordino version (`sordinoctl status`):
 - Microphone (model, USB / built-in / Bluetooth):
 
 **Diagnostics** (please attach, they usually answer the first questions)
-- `hushctl state`
-- `journalctl --user -u hushd -n 100` or the terminal output of `RUST_LOG=debug hushd`
+- `sordinoctl state`
+- `journalctl --user -u sordinod -n 100` or the terminal output of `RUST_LOG=debug sordinod`
 - `pw-dump > pw-dump.json` (contains device and app names, check it before posting)

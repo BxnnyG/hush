@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Sordino
+GenericName=Microphone noise suppression
+GenericName[de]=Mikrofon-Rauschunterdrückung
+Comment=Clean microphone audio for calls with one switch
+Comment[de]=Sauberer Mikrofonton für Calls mit einem Schalter
+Exec=sordino
+Icon=io.github.bxnnyg.Sordino
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=microphone;noise;krisp;rnnoise;pipewire;mikrofon;rauschen;
+StartupWMClass=sordino

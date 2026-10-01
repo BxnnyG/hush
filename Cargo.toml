@@ -1,13 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["crates/hush-core", "crates/hushd", "crates/hushctl", "ui/src-tauri"]
-default-members = ["crates/hush-core", "crates/hushd", "crates/hushctl", "ui/src-tauri"]
+members = ["crates/sordino-core", "crates/sordinod", "crates/sordinoctl", "ui/src-tauri"]
+default-members = ["crates/sordino-core", "crates/sordinod", "crates/sordinoctl", "ui/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/BxnnyG/hush"
+repository = "https://github.com/BxnnyG/sordino"
 rust-version = "1.80"
 
 [workspace.dependencies]
@@ -27,7 +27,7 @@ debug = false
 # DeepFilterNet (tract) is unusably slow in debug builds; keep tests usable.
 [profile.dev.package."*"]
 opt-level = 3
-[profile.dev.package.hush-core]
+[profile.dev.package.sordino-core]
 opt-level = 3
 
 # Faster profile for local iteration: optimised (the model needs it) but no LTO.

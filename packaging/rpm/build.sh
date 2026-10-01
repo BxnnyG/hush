@@ -6,11 +6,11 @@ out=${2:-.}
 here=$(cd "$(dirname "$0")/../.." && pwd)
 top=$(mktemp -d)
 trap 'rm -rf "$top"' EXIT
-rpmbuild -bb "$here/packaging/rpm/bxy-hush.spec" \
+rpmbuild -bb "$here/packaging/rpm/bxy-sordino.spec" \
   --define "_topdir $top" \
-  --define "hush_version $ver" \
-  --define "hush_stage $here/packaging/stage.sh" \
-  --define "hush_bins $(cd "${BINDIR:-$here/target/release}" && pwd)" >/dev/null
+  --define "sordino_version $ver" \
+  --define "sordino_stage $here/packaging/stage.sh" \
+  --define "sordino_bins $(cd "${BINDIR:-$here/target/release}" && pwd)" >/dev/null
 mkdir -p "$out"
 cp "$top"/RPMS/*/*.rpm "$out"/
 ls "$out"/*.rpm

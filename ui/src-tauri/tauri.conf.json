@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Hush",
+  "productName": "Sordino",
   "version": "0.1.0",
-  "identifier": "io.github.bxnnyg.Hush",
+  "identifier": "io.github.bxnnyg.Sordino",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420"
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Hush",
+        "title": "Sordino",
         "width": 460,
         "height": 880,
         "minWidth": 380,

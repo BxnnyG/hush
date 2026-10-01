@@ -1,0 +1,25 @@
+[package]
+name = "sordinod"
+description = "Sordino daemon: builds the Sordino Mic PipeWire source and exposes it over D-Bus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+sordino-core = { path = "../sordino-core" }
+anyhow.workspace = true
+log.workspace = true
+env_logger.workspace = true
+serde.workspace = true
+serde_json = "1"
+pipewire = { version = "0.10", features = ["v0_3_49"] }
+ringbuf = "0.4"
+zbus = "5"
+
+[features]
+default = ["echo"]
+# Echo cancellation needs webrtc-audio-processing-2 on the system.
+echo = ["sordino-core/echo"]
+echo-bundled = ["sordino-core/echo-bundled"]

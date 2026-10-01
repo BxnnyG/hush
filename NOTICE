@@ -1,20 +1,20 @@
-Hush
-Copyright (C) 2026 BxnnyG <https://github.com/BxnnyG/hush>
+Sordino
+Copyright (C) 2026 BxnnyG <https://github.com/BxnnyG/sordino>
 
-Hush is free software, licensed under the GNU General Public License, version 3 or (at your
+Sordino is free software, licensed under the GNU General Public License, version 3 or (at your
 option) any later version. See the file LICENSE.
 
 Additional terms under section 7 of the GNU GPL version 3
 ---------------------------------------------------------
 As permitted by section 7(b) of the GPL, the following additional requirement applies to
-Hush and to every work based on it:
+Sordino and to every work based on it:
 
-  Reasonable author attributions must be preserved. Any copy or modified version of Hush that
+  Reasonable author attributions must be preserved. Any copy or modified version of Sordino that
   is conveyed (distributed) must keep the copyright notice above and must keep a clearly visible
-  attribution to the original project, "Hush by BxnnyG", with a link to
-  https://github.com/BxnnyG/hush, in its user interface (the footer of the main window) and in
+  attribution to the original project, "Sordino by BxnnyG", with a link to
+  https://github.com/BxnnyG/sordino, in its user interface (the footer of the main window) and in
   its documentation (README). A modified version may add its own attribution next to it, but
-  must not present itself as the original Hush.
+  must not present itself as the original Sordino.
 
 Because the GPL applies, anyone who conveys a copy or a modified version (a fork, a package, a
 derived product) must make the complete corresponding source code available under the same

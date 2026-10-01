@@ -60,15 +60,15 @@ jobs:
       # Echo suppression is built from the bundled WebRTC source so the packages work on
       # distros that do not ship webrtc-audio-processing-2.
       - name: Build
-        run: cargo build --release --workspace --features hushd/echo-bundled
+        run: cargo build --release --workspace --features sordinod/echo-bundled
 
       - name: Test (including the echo canceller)
-        run: cargo test --release --workspace --features hushd/echo-bundled
+        run: cargo test --release --workspace --features sordinod/echo-bundled
 
       - name: Smoke test
         run: |
-          target/release/hushd --version
-          target/release/hushctl --version
+          target/release/sordinod --version
+          target/release/sordinoctl --version
 
       - name: Packages
         run: |
@@ -101,11 +101,11 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           git config --global --add safe.directory "$PWD"
           mkdir -p /home/builder/pkg
-          git archive --prefix="hush-$ver/" -o /home/builder/pkg/src.tar.gz HEAD
+          git archive --prefix="sordino-$ver/" -o /home/builder/pkg/src.tar.gz HEAD
           cp packaging/aur/PKGBUILD /home/builder/pkg/
           chown -R builder /home/builder/pkg
           cd /home/builder/pkg
-          su builder -c "HUSH_SOURCE_URL=file:///home/builder/pkg/src.tar.gz makepkg --noconfirm"
+          su builder -c "SORDINO_SOURCE_URL=file:///home/builder/pkg/src.tar.gz makepkg --noconfirm"
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp /home/builder/pkg/*.pkg.tar.zst "$GITHUB_WORKSPACE/out/"
       - uses: actions/upload-artifact@v4
@@ -125,13 +125,13 @@ jobs:
         run: git clone --depth 1 https://github.com/flathub/shared-modules packaging/flatpak/shared-modules
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: bxy-hush-${{ needs.version.outputs.version }}.flatpak
-          manifest-path: packaging/flatpak/io.github.bxnnyg.Hush.yml
+          bundle: bxy-sordino-${{ needs.version.outputs.version }}.flatpak
+          manifest-path: packaging/flatpak/io.github.bxnnyg.Sordino.yml
           cache-key: flatpak-${{ hashFiles('Cargo.lock', 'ui/package-lock.json') }}
       - uses: actions/upload-artifact@v4
         with:
           name: flatpak
-          path: bxy-hush-*.flatpak
+          path: bxy-sordino-*.flatpak
 
   publish:
     if: github.ref_type == 'tag'
@@ -153,10 +153,10 @@ jobs:
 
           ## Install
 
-          * **Arch Linux**: `sudo pacman -U bxy-hush-*.pkg.tar.zst`
-          * **Debian / Ubuntu 24.04+**: `sudo apt install ./bxy-hush_*_amd64.deb`
-          * **Fedora**: `sudo dnf install ./bxy-hush-*.rpm`
-          * **Flatpak** (experimental): `flatpak install --user ./bxy-hush-*.flatpak`
+          * **Arch Linux**: `sudo pacman -U bxy-sordino-*.pkg.tar.zst`
+          * **Debian / Ubuntu 24.04+**: `sudo apt install ./bxy-sordino_*_amd64.deb`
+          * **Fedora**: `sudo dnf install ./bxy-sordino-*.rpm`
+          * **Flatpak** (experimental): `flatpak install --user ./bxy-sordino-*.flatpak`
           * **Any distro**: unpack the tarball and run `./install.sh`
 
           Verify downloads with `sha256sum -c SHA256SUMS`.
@@ -168,4 +168,4 @@ jobs:
           ver=${{ needs.version.outputs.version }}
           flag=""
           case "$ver" in 0.*) flag="--prerelease";; esac
-          gh release create "${GITHUB_REF_NAME}" dist/* $flag --title "Hush $ver" --notes-file notes.md
+          gh release create "${GITHUB_REF_NAME}" dist/* $flag --title "Sordino $ver" --notes-file notes.md

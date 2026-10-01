@@ -1,6 +1,6 @@
 [package]
-name = "hush-ui"
-description = "Hush desktop app"
+name = "sordino-ui"
+description = "Sordino desktop app"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,14 +14,14 @@ default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
 
 [[bin]]
-name = "hush"
+name = "sordino"
 path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-hush-core = { path = "../../crates/hush-core" }
+sordino-core = { path = "../../crates/sordino-core" }
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-single-instance = "2"
 serde.workspace = true

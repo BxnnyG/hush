@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b8cff"/>
+      <stop offset="1" stop-color="#0a49c9"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <!-- microphone capsule -->
+  <rect x="196" y="96" width="120" height="212" rx="60" fill="#fff"/>
+  <!-- holder arc and stand -->
+  <path d="M146 264c0 60 48 108 110 108s110-48 110-108" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round"/>
+  <path d="M256 372v52M204 424h104" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round"/>
+  <!-- calm, muted sound lines: the "sordino" -->
+  <path d="M104 190c-14 22-14 58 0 80M408 190c14 22 14 58 0 80" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="22" stroke-linecap="round"/>
+</svg>

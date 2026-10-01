@@ -1,0 +1,55 @@
+# Flatpak manifest for Sordino (Sordino by BxnnyG, https://github.com/BxnnyG/sordino).
+#
+# Build:  git clone --depth 1 https://github.com/flathub/shared-modules packaging/flatpak/shared-modules
+#         flatpak-builder --user --install --force-clean build-dir packaging/flatpak/io.github.bxnnyg.Sordino.yml
+#
+# Not Flathub-ready: the build needs network access (cargo, npm, abseil for the bundled echo
+# canceller). It is meant for the release bundle published on GitHub.
+app-id: io.github.bxnnyg.Sordino
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.node22
+  # libclang for bindgen (pipewire-rs)
+  - org.freedesktop.Sdk.Extension.llvm20
+command: sordino
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Sordino creates a PipeWire source and manages devices, so it needs the real PipeWire socket.
+  - --filesystem=xdg-run/pipewire-0
+  # The daemon (sordinod) runs inside the same sandbox and owns this name for the app and sordinoctl.
+  - --own-name=io.github.bxnnyg.Sordino
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.portal.Desktop
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin:/usr/lib/sdk/llvm20/bin
+  build-args:
+    - --share=network
+  env:
+    CARGO_HOME: /run/build/sordino/cargo
+    LIBCLANG_PATH: /usr/lib/sdk/llvm20/lib
+
+modules:
+  - shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json
+
+  - name: sordino
+    buildsystem: simple
+    build-commands:
+      - cd ui && npm ci --no-audit --no-fund && npm run build
+      - cargo build --release --workspace --features sordinod/echo-bundled
+      - packaging/stage.sh / /app target/release
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - target-bundled
+          - ui/node_modules
+          - .git
