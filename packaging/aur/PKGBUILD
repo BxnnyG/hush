@@ -8,7 +8,8 @@ url='https://github.com/BxnnyG/hush'
 license=('GPL-3.0-or-later')
 depends=('pipewire' 'wireplumber' 'webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'webrtc-audio-processing' 'xdg-utils')
 makedepends=('rust' 'clang' 'nodejs' 'npm' 'git')
-options=('!debug')
+# makepkg's default -flto makes the C++ part of WebRTC unreadable for Rust's linker.
+options=('!debug' '!lto')
 # HUSH_SOURCE_URL lets CI build from a local checkout (file:///...) instead of the release tag.
 source=("$pkgname-$pkgver.tar.gz::${HUSH_SOURCE_URL:-$url/archive/v$pkgver.tar.gz}")
 sha256sums=('SKIP')
