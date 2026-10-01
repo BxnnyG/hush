@@ -5,3 +5,4 @@
 *.log
 .claude/
 /ui/src-tauri/gen
+target-bundled/

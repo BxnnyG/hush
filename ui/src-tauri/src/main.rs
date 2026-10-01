@@ -131,6 +131,12 @@ pub fn show_main_window(app: &AppHandle) {
     }
 }
 
+/// Is there a tray that can bring the window back? Without one (e.g. GNOME without the
+/// AppIndicator extension) hiding the window would make Hush unreachable.
+fn tray_available(shared: &Arc<App>) -> bool {
+    tauri::async_runtime::block_on(shared.bus.name_has_owner("org.kde.StatusNotifierWatcher"))
+}
+
 fn run_in_background(app: &AppHandle) -> bool {
     app.try_state::<Arc<App>>()
         .and_then(|s| {
@@ -164,9 +170,13 @@ fn main() {
                 tray: Mutex::new(None),
             });
             app.manage(shared.clone());
-            tray::build(app.handle(), &shared)?;
+            // The tray is a convenience: if it cannot be built, Hush still works without it.
+            if let Err(e) = tray::build(app.handle(), &shared) {
+                log::warn!("no tray icon: {e}");
+            }
             bus::spawn_watcher(app.handle().clone(), shared.clone());
-            if hidden {
+            // Start hidden (autostart) only if a tray can bring the window back.
+            if hidden && tray_available(&shared) {
                 if let Some(w) = app.get_webview_window("main") {
                     let _ = w.hide();
                 }
@@ -176,7 +186,10 @@ fn main() {
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let app = window.app_handle().clone();
-                if run_in_background(&app) {
+                let can_hide = app
+                    .try_state::<Arc<App>>()
+                    .is_some_and(|s| tray_available(s.inner()));
+                if run_in_background(&app) && can_hide {
                     api.prevent_close();
                     let _ = window.hide();
                     if let Some(shared) = app.try_state::<Arc<App>>() {
@@ -186,7 +199,8 @@ fn main() {
                             let _ = shared.bus.call("SetWatching", &(false,)).await;
                         });
                     }
-                } else {
+                } else if !run_in_background(&app) {
+                    // The user asked for "stop when closed": stop the daemon as well.
                     api.prevent_close();
                     if let Some(shared) = app.try_state::<Arc<App>>() {
                         let shared = shared.inner().clone();
@@ -194,6 +208,14 @@ fn main() {
                             async move { quit_everything(&app, &shared).await },
                         );
                     }
+                } else if let Some(shared) = app.try_state::<Arc<App>>() {
+                    // Background mode but no tray to come back from: close the window normally.
+                    // The daemon keeps running as a service, the app can be started again.
+                    let shared = shared.inner().clone();
+                    tauri::async_runtime::block_on(async move {
+                        let _ = shared.bus.call("SetMonitor", &(false,)).await;
+                        let _ = shared.bus.call("SetWatching", &(false,)).await;
+                    });
                 }
             }
         })

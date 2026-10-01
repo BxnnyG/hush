@@ -41,3 +41,12 @@ and `cd ui && npm run check`.
 ## License of contributions
 
 By contributing you agree that your work is licensed under GPL-3.0-or-later with the attribution terms in [NOTICE](NOTICE).
+
+## Releasing
+
+1. Bump `version` in `Cargo.toml` (workspace), `ui/src-tauri/tauri.conf.json` and `packaging/aur/PKGBUILD`,
+   add a section to `CHANGELOG.md`.
+2. Commit, then `git tag vX.Y.Z && git push --tags`.
+3. The `Release` workflow builds the deb, rpm, Arch package, Flatpak bundle and tarball, writes
+   `SHA256SUMS` and publishes the GitHub release (marked pre-release while the version is 0.x).
+   "Run workflow" on the Release workflow does a dry run without publishing.

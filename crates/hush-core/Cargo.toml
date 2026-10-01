@@ -11,6 +11,9 @@ rust-version.workspace = true
 default = []
 # Acoustic echo cancellation (WebRTC AEC3). Needs the system library webrtc-audio-processing-2.
 echo = ["dep:webrtc-audio-processing", "dep:webrtc-audio-processing-config"]
+# Same, but builds WebRTC audio processing from the bundled source (needs meson and ninja).
+# Used for release packages on distros that do not ship webrtc-audio-processing-2.
+echo-bundled = ["echo", "webrtc-audio-processing/bundled"]
 
 [dependencies]
 anyhow.workspace = true

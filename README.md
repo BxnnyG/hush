@@ -32,23 +32,33 @@ Pick **Hush Mic** in Discord, Element, Teams, Zoom or OBS and you are done.
 
 ## Install
 
-Arch Linux (AUR package in preparation, see `packaging/aur`):
+Download a package from the [latest release](https://github.com/BxnnyG/hush/releases/latest)
+(check it with `sha256sum -c SHA256SUMS`):
 
-```sh
-makepkg -si -D packaging/aur
-```
+| System | Command |
+|---|---|
+| Arch Linux / CachyOS / Manjaro | `sudo pacman -U bxy-hush-*.pkg.tar.zst` |
+| Debian 13+, Ubuntu 24.04+ | `sudo apt install ./bxy-hush_*_amd64.deb` |
+| Fedora 40+ | `sudo dnf install ./bxy-hush-*.rpm` |
+| Flatpak (experimental) | `flatpak install --user ./bxy-hush-*.flatpak` |
+| Any other distro | unpack `bxy-hush-*-x86_64-linux.tar.gz`, run `./install.sh` |
 
-From source, you need `rust`, `clang`, `nodejs`, `npm`, `pipewire`, `webkit2gtk-4.1`,
-`libayatana-appindicator` and `webrtc-audio-processing-2` (optional, for echo suppression):
+The AUR package `bxy-hush` is prepared in [packaging/aur](packaging/aur) and will be submitted as soon
+as AUR account registration is open again. Until then:
+`git clone https://github.com/BxnnyG/hush && cd hush/packaging/aur && makepkg -si`
+(this downloads the release tarball of the tag in the PKGBUILD).
+
+### From source
+
+You need `rust`, `clang`, `nodejs`, `npm`, `pipewire`, `webkit2gtk-4.1`, `libayatana-appindicator` and
+for echo suppression `webrtc-audio-processing-2` (or `meson` + `ninja`, then build with
+`--features hushd/echo-bundled` to compile WebRTC from the bundled source):
 
 ```sh
 cd ui && npm ci && npm run build && cd ..
-cargo build --release                        # target/release/{hushd,hushctl,hush}
-sudo install -Dm755 target/release/{hushd,hushctl,hush} /usr/local/bin/
-sudo install -Dm644 dist/io.github.bxnnyg.Hush.service /usr/share/dbus-1/services/   # Exec=/usr/bin/hushd, adjust if needed
+cargo build --release                     # target/release/{hushd,hushctl,hush}
+packaging/stage.sh /tmp/hush-root /usr    # shows exactly what a package installs
 ```
-
-Without echo suppression: `cargo build --release --no-default-features`.
 
 ## Use
 

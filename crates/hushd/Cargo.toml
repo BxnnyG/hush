@@ -22,3 +22,4 @@ zbus = "5"
 default = ["echo"]
 # Echo cancellation needs webrtc-audio-processing-2 on the system.
 echo = ["hush-core/echo"]
+echo-bundled = ["hush-core/echo-bundled"]

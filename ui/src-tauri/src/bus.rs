@@ -53,6 +53,17 @@ impl Bus {
         serde_json::from_str(&json).map_err(|e| e.to_string())
     }
 
+    /// Whether something owns this bus name, e.g. a system tray host.
+    pub async fn name_has_owner(&self, name: &str) -> bool {
+        match (
+            zbus::fdo::DBusProxy::new(&self.conn).await,
+            zbus::names::BusName::try_from(name),
+        ) {
+            (Ok(p), Ok(n)) => p.name_has_owner(n).await.unwrap_or(false),
+            _ => false,
+        }
+    }
+
     async fn daemon_running(&self) -> bool {
         match zbus::fdo::DBusProxy::new(&self.conn).await {
             Ok(p) => p

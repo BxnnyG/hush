@@ -1,0 +1,171 @@
+name: Release
+
+# Push a tag like v0.2.0 to build every package and publish a GitHub release.
+# "Run workflow" builds everything without publishing (dry run).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          ver=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = tag ] && [ "${GITHUB_REF_NAME}" != "v$ver" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match Cargo.toml version $ver"; exit 1
+          fi
+
+  linux:
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang libclang-dev pkg-config meson ninja-build rpm dpkg-dev \
+            libpipewire-0.3-dev libspa-0.2-dev \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev \
+            libayatana-appindicator3-dev librsvg2-dev libssl-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Frontend
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+
+      # Echo suppression is built from the bundled WebRTC source so the packages work on
+      # distros that do not ship webrtc-audio-processing-2.
+      - name: Build
+        run: cargo build --release --workspace --features hushd/echo-bundled
+
+      - name: Test (including the echo canceller)
+        run: cargo test --release --workspace --features hushd/echo-bundled
+
+      - name: Smoke test
+        run: |
+          target/release/hushd --version
+          target/release/hushctl --version
+
+      - name: Packages
+        run: |
+          mkdir -p out
+          ver=${{ needs.version.outputs.version }}
+          packaging/deb/build.sh "$ver" amd64 out
+          packaging/rpm/build.sh "$ver" out
+          packaging/tarball/build.sh "$ver" out
+          dpkg-deb -I out/*.deb
+          rpm -qpl out/*.rpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: out/*
+
+  arch:
+    needs: version
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    steps:
+      - name: System packages
+        run: |
+          pacman -Syu --noconfirm base-devel git rust clang nodejs npm pipewire wireplumber \
+            webkit2gtk-4.1 gtk3 libayatana-appindicator webrtc-audio-processing-2 xdg-utils
+          useradd -m builder
+      - uses: actions/checkout@v4
+      - name: makepkg
+        run: |
+          ver=${{ needs.version.outputs.version }}
+          git config --global --add safe.directory "$PWD"
+          mkdir -p /home/builder/pkg
+          git archive --prefix="hush-$ver/" -o /home/builder/pkg/src.tar.gz HEAD
+          cp packaging/aur/PKGBUILD /home/builder/pkg/
+          chown -R builder /home/builder/pkg
+          cd /home/builder/pkg
+          su builder -c "HUSH_SOURCE_URL=file:///home/builder/pkg/src.tar.gz makepkg --noconfirm"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp /home/builder/pkg/*.pkg.tar.zst "$GITHUB_WORKSPACE/out/"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch-package
+          path: out/*
+
+  flatpak:
+    needs: version
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shared modules (libayatana-appindicator for the tray)
+        run: git clone --depth 1 https://github.com/flathub/shared-modules packaging/flatpak/shared-modules
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: bxy-hush-${{ needs.version.outputs.version }}.flatpak
+          manifest-path: packaging/flatpak/io.github.bxnnyg.Hush.yml
+          cache-key: flatpak-${{ hashFiles('Cargo.lock', 'ui/package-lock.json') }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak
+          path: bxy-hush-*.flatpak
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [version, linux, arch, flatpak]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+      - name: Release notes from CHANGELOG.md
+        run: |
+          ver=${{ needs.version.outputs.version }}
+          awk -v v="$ver" '$0 ~ "^## "v"$" {p=1; next} /^## / {p=0} p' CHANGELOG.md > notes.md
+          cat >> notes.md <<'EOF2'
+
+          ## Install
+
+          * **Arch Linux**: `sudo pacman -U bxy-hush-*.pkg.tar.zst`
+          * **Debian / Ubuntu 24.04+**: `sudo apt install ./bxy-hush_*_amd64.deb`
+          * **Fedora**: `sudo dnf install ./bxy-hush-*.rpm`
+          * **Flatpak** (experimental): `flatpak install --user ./bxy-hush-*.flatpak`
+          * **Any distro**: unpack the tarball and run `./install.sh`
+
+          Verify downloads with `sha256sum -c SHA256SUMS`.
+          EOF2
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ver=${{ needs.version.outputs.version }}
+          flag=""
+          case "$ver" in 0.*) flag="--prerelease";; esac
+          gh release create "${GITHUB_REF_NAME}" dist/* $flag --title "Hush $ver" --notes-file notes.md
