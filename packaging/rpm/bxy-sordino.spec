@@ -33,6 +33,7 @@ Sordino by BxnnyG, https://github.com/BxnnyG/sordino
 /usr/share/applications/io.github.bxnnyg.Sordino.desktop
 /usr/share/dbus-1/services/io.github.bxnnyg.Sordino.service
 /usr/lib/systemd/user/sordinod.service
+/usr/share/metainfo/io.github.bxnnyg.Sordino.metainfo.xml
 /usr/share/icons/hicolor/scalable/apps/io.github.bxnnyg.Sordino.svg
 /usr/share/icons/hicolor/128x128/apps/io.github.bxnnyg.Sordino.png
 /usr/share/licenses/bxy-sordino/

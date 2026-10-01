@@ -18,6 +18,7 @@ sed "s|^Exec=.*|Exec=$prefix/bin/sordinod|" "$here/dist/io.github.bxnnyg.Sordino
 sed "s|^ExecStart=.*|ExecStart=$prefix/bin/sordinod|" "$here/dist/sordinod.service" \
   | install -Dm644 /dev/stdin "$dest$prefix/lib/systemd/user/sordinod.service"
 
+install -Dm644 "$here/dist/io.github.bxnnyg.Sordino.metainfo.xml" "$dest$prefix/share/metainfo/io.github.bxnnyg.Sordino.metainfo.xml"
 install -Dm644 "$here/assets/sordino.svg" "$dest$prefix/share/icons/hicolor/scalable/apps/io.github.bxnnyg.Sordino.svg"
 install -Dm644 "$here/ui/src-tauri/icons/128x128.png" "$dest$prefix/share/icons/hicolor/128x128/apps/io.github.bxnnyg.Sordino.png"
 install -Dm644 "$here/LICENSE" "$dest$prefix/share/licenses/bxy-sordino/LICENSE"

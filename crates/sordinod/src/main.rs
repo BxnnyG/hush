@@ -4,6 +4,7 @@ mod audio;
 mod dbus;
 mod devices;
 mod engine;
+mod rt;
 
 use std::sync::mpsc;
 use std::sync::Arc;

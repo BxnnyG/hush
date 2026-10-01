@@ -4,7 +4,17 @@ export type Status = 'off' | 'starting' | 'running' | 'mic_missing' | 'no_pipewi
 export type Strength = 'light' | 'medium' | 'high' | 'max';
 export type Preset = 'off' | 'natural' | 'clear' | 'warm' | 'custom';
 export type ProfileKind = 'voice' | 'studio' | 'stereo' | 'headset' | 'music' | 'off' | 'other';
-export type DeviceKind = 'usb' | 'builtin' | 'bluetooth' | 'headset' | 'webcam' | 'loopback' | 'other';
+export type DeviceKind =
+  | 'usb'
+  | 'builtin'
+  | 'bluetooth'
+  | 'headset'
+  | 'headphones'
+  | 'speaker'
+  | 'hdmi'
+  | 'webcam'
+  | 'loopback'
+  | 'other';
 
 export interface StudioParams {
   lowcut_hz: number;
@@ -21,7 +31,6 @@ export interface Settings {
   enabled: boolean;
   mic: string | null;
   set_default: boolean;
-  autostart: boolean;
   run_in_background: boolean;
   show_all_devices: boolean;
   noise: { enabled: boolean; strength: Strength };
@@ -63,6 +72,10 @@ export interface SordinoState {
   devices: Device[];
   hidden_devices: Device[];
   active_mic: string | null;
+  sinks: Device[];
+  default_source: string | null;
+  default_sink: string | null;
+  diag: Diag;
   profile_hint: ProfileHint | null;
   latency_ms: number | null;
   default_is_sordino: boolean;
@@ -70,6 +83,24 @@ export interface SordinoState {
   ab_original: boolean;
   echo_available: boolean;
   presets: Record<string, StudioParams>;
+}
+
+export interface Diag {
+  out_underruns: number;
+  out_skipped: number;
+  in_dropped: number;
+  model_errors: number;
+  quantum: number;
+  out_callbacks: number;
+  dsp_priority: number;
+  overload_hops: number;
+  overload_events: number;
+}
+
+export interface AutostartStatus {
+  app: boolean;
+  daemon: boolean;
+  flatpak: boolean;
 }
 
 export interface Levels {

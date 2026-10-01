@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.bxnnyg.Sordino</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Sordino</name>
+  <summary>Clean microphone audio for calls with one switch</summary>
+  <developer id="io.github.bxnnyg">
+    <name>BxnnyG</name>
+  </developer>
+  <description>
+    <p>
+      Sordino adds a virtual microphone called "Sordino Mic" that removes background noise with
+      the DeepFilterNet 3 neural network. Pick it in Discord, Element, Teams, Zoom or OBS and
+      you are done.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>AI noise suppression with four strengths</li>
+      <li>Studio sound presets (natural, clear, warm) and an advanced view</li>
+      <li>Experimental echo suppression for speaker setups</li>
+      <li>Detects microphones stuck on the "pro-audio" profile and fixes them with one click</li>
+      <li>Test mode: hear yourself, with an instant A/B comparison</li>
+      <li>Everything runs locally: no account, no telemetry, audio never leaves your computer</li>
+    </ul>
+    <p>Requires PipeWire.</p>
+  </description>
+  <launchable type="desktop-id">io.github.bxnnyg.Sordino.desktop</launchable>
+  <url type="homepage">https://github.com/BxnnyG/sordino</url>
+  <url type="bugtracker">https://github.com/BxnnyG/sordino/issues</url>
+  <url type="vcs-browser">https://github.com/BxnnyG/sordino</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/BxnnyG/sordino/main/docs/screenshot.png</image>
+      <caption>The main window</caption>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+  </categories>
+  <provides>
+    <binary>sordino</binary>
+    <binary>sordinod</binary>
+    <binary>sordinoctl</binary>
+  </provides>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#6aa6ff</color>
+    <color type="primary" scheme_preference="dark">#0a49c9</color>
+  </branding>
+  <releases>
+    <release version="0.1.0" date="2026-10-01">
+      <description>
+        <p>First public preview.</p>
+      </description>
+    </release>
+  </releases>
+</component>

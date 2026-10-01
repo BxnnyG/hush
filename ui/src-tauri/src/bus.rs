@@ -64,6 +64,30 @@ impl Bus {
         }
     }
 
+    /// Ask the Background portal (Flatpak) to start the app at login, or to stop doing so.
+    pub async fn request_background(&self, autostart: bool) -> Result<(), String> {
+        use std::collections::HashMap;
+        use zbus::zvariant::Value;
+        let mut options: HashMap<&str, Value> = HashMap::new();
+        options.insert("autostart", Value::from(autostart));
+        options.insert("commandline", Value::from(vec!["sordino", "--hidden"]));
+        options.insert(
+            "reason",
+            Value::from("Keep Sordino Mic available in the background"),
+        );
+        self.conn
+            .call_method(
+                Some("org.freedesktop.portal.Desktop"),
+                "/org/freedesktop/portal/desktop",
+                Some("org.freedesktop.portal.Background"),
+                "RequestBackground",
+                &("", options),
+            )
+            .await
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+
     async fn daemon_running(&self) -> bool {
         match zbus::fdo::DBusProxy::new(&self.conn).await {
             Ok(p) => p

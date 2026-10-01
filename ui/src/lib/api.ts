@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { SordinoState, Levels, Patch, Settings } from './types';
+import type { AutostartStatus, SordinoState, Levels, Patch, Settings } from './types';
 
 /** Thin wrapper over the Tauri commands, which in turn talk to sordinod over D-Bus. */
 export const api = {
@@ -10,7 +10,10 @@ export const api = {
   setMonitor: (on: boolean) => invoke<void>('set_monitor', { on }),
   setAbOriginal: (on: boolean) => invoke<void>('set_ab_original', { on }),
   setWatching: (on: boolean) => invoke<void>('set_watching', { on }),
+  getAutostart: () => invoke<AutostartStatus>('get_autostart'),
   setAutostart: (on: boolean) => invoke<void>('set_autostart', { on }),
+  setDaemonAutostart: (on: boolean) => invoke<void>('set_daemon_autostart', { on }),
+  setDefaultDevice: (kind: 'source' | 'sink', name: string) => invoke<void>('set_default_device', { kind, name }),
   startDaemon: () => invoke<void>('start_daemon'),
   quit: () => invoke<void>('quit_app'),
   openRepo: () => invoke<void>('open_repo'),

@@ -67,7 +67,6 @@ pub struct Settings {
     pub mic: Option<String>,
     /// Make Sordino Mic the system default microphone while running.
     pub set_default: bool,
-    pub autostart: bool,
     /// Keep running in the tray when the window is closed.
     pub run_in_background: bool,
     pub show_all_devices: bool,
@@ -82,7 +81,6 @@ impl Default for Settings {
             enabled: true,
             mic: None,
             set_default: false,
-            autostart: false,
             run_in_background: true,
             show_all_devices: false,
             noise: NoiseSettings::default(),

@@ -63,6 +63,23 @@ impl Iface {
         self.send(Cmd::SetProfile { card, index })
     }
 
+    /// `kind` is "source" (microphone) or "sink" (output).
+    fn set_default_device(&self, kind: &str, name: &str) -> fdo::Result<()> {
+        let sink = match kind {
+            "source" => false,
+            "sink" => true,
+            other => {
+                return Err(fdo::Error::InvalidArgs(format!(
+                    "kind must be 'source' or 'sink', got {other:?}"
+                )))
+            }
+        };
+        self.send(Cmd::SetDefaultDevice {
+            sink,
+            name: name.to_string(),
+        })
+    }
+
     fn set_monitor(&self, on: bool) -> fdo::Result<()> {
         self.send(Cmd::SetMonitor(on))
     }

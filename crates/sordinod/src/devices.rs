@@ -29,8 +29,16 @@ pub struct CardInfo {
 
 impl SourceNode {
     pub fn from_props(node_id: u32, get: impl Fn(&str) -> Option<String>) -> Option<SourceNode> {
-        let class = get("media.class")?;
-        if class != "Audio/Source" {
+        Self::from_props_class(node_id, "Audio/Source", get)
+    }
+
+    /// Parse a node of the given `media.class` (`Audio/Source` or `Audio/Sink`).
+    pub fn from_props_class(
+        node_id: u32,
+        class: &str,
+        get: impl Fn(&str) -> Option<String>,
+    ) -> Option<SourceNode> {
+        if get("media.class")? != class {
             return None;
         }
         let name = get("node.name")?;
@@ -73,8 +81,41 @@ impl SourceNode {
     }
 
     /// Webcams, loopbacks and similar are hidden unless the user asks for everything.
+    /// Kind of an output device, from the form factor and names.
+    pub fn sink_kind(&self) -> DeviceKind {
+        let name = self.name.to_lowercase();
+        let desc = self.description.to_lowercase();
+        if name.contains("snd_aloop") || desc.contains("loopback") {
+            return DeviceKind::Loopback;
+        }
+        if self.api.as_deref() == Some("bluez5") || name.starts_with("bluez") {
+            return DeviceKind::Bluetooth;
+        }
+        if name.contains("hdmi") || desc.contains("hdmi") || desc.contains("displayport") {
+            return DeviceKind::Hdmi;
+        }
+        match self.form_factor.as_deref() {
+            Some("headphone") => return DeviceKind::Headphones,
+            Some("headset") | Some("hands-free") => return DeviceKind::Headset,
+            Some("speaker") | Some("internal") => return DeviceKind::Speaker,
+            _ => {}
+        }
+        match self.bus.as_deref() {
+            Some("usb") => DeviceKind::Usb,
+            Some("pci") => DeviceKind::Builtin,
+            _ => DeviceKind::Other,
+        }
+    }
+
     pub fn hidden_by_default(&self) -> bool {
         matches!(self.kind(), DeviceKind::Webcam | DeviceKind::Loopback)
+    }
+
+    pub fn to_sink_device(&self, cards: &HashMap<u32, CardInfo>) -> Device {
+        Device {
+            kind: self.sink_kind(),
+            ..self.to_device(cards)
+        }
     }
 
     pub fn to_device(&self, cards: &HashMap<u32, CardInfo>) -> Device {

@@ -63,6 +63,32 @@ impl Strength {
     }
 }
 
+/// DeepFilterNet's local-SNR switching thresholds (dB). Below `min` a frame counts as pure noise
+/// (zero mask), above `max_erb` as clean speech (passed through), above `max_df` only the first
+/// stage runs.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Thresholds {
+    pub min_db: f32,
+    pub max_erb_db: f32,
+    pub max_df_db: f32,
+}
+
+impl Default for Thresholds {
+    fn default() -> Self {
+        // NOT the library defaults (-10 / 30 / 20). With those, any frame above 20 dB local SNR
+        // skips the deep-filtering stage and only gets the coarse first-stage mask, which sounds
+        // muffled and robotic ("underwater") and even degrades *clean* speech. Measured on real
+        // speech (SI-SDR / STOI / PESQ, mean over 3 SNRs and 2 noise types): library defaults
+        // 11.4 dB / 0.901 / 2.41, these values 19.9 dB / 0.976 / 3.10 (the DeepFilterNet LADSPA
+        // plugin uses the same ones). `min` barely matters, `max_df` is what counts.
+        Thresholds {
+            min_db: -15.0,
+            max_erb_db: 35.0,
+            max_df_db: 35.0,
+        }
+    }
+}
+
 pub struct Denoiser {
     df: DfTract,
     strength: Strength,
@@ -70,9 +96,14 @@ pub struct Denoiser {
 
 impl Denoiser {
     pub fn new(strength: Strength) -> Result<Self> {
+        Self::with_thresholds(strength, Thresholds::default())
+    }
+
+    pub fn with_thresholds(strength: Strength, t: Thresholds) -> Result<Self> {
         let rp = RuntimeParams::default_with_ch(1)
             .with_atten_lim(strength.atten_limit_db())
-            .with_post_filter(strength.post_filter_beta());
+            .with_post_filter(strength.post_filter_beta())
+            .with_thresholds(t.min_db, t.max_erb_db, t.max_df_db);
         let df = DfTract::new(DfParams::default(), &rp)
             .map_err(|e| anyhow!("DeepFilterNet could not be loaded: {e}"))?;
         if df.sr != SAMPLE_RATE as usize || df.hop_size != HOP || df.ch != 1 {
@@ -137,6 +168,14 @@ mod tests {
             d.process_hop(i, o).unwrap();
         }
         out
+    }
+
+    #[test]
+    fn default_thresholds_keep_deep_filtering_on_for_loud_speech() {
+        // Regression guard for the "underwater" bug: stage 2 must run up to 35 dB local SNR.
+        let t = Thresholds::default();
+        assert!(t.max_df_db >= 35.0 && t.max_erb_db >= 35.0);
+        assert!(t.min_db <= -15.0);
     }
 
     #[test]

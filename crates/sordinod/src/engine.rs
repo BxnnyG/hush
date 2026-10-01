@@ -38,6 +38,7 @@ const DEFAULT_SOURCE: &str = "default.audio.source";
 /// A client must renew `SetMonitor(true)` within this time or monitoring switches itself off.
 const MONITOR_KEEPALIVE: Duration = Duration::from_secs(5);
 const DEFAULT_SINK: &str = "default.audio.sink";
+const CONFIGURED_DEFAULT_SINK: &str = "default.configured.audio.sink";
 const CONFIGURED_DEFAULT_SOURCE: &str = "default.configured.audio.source";
 
 /// Commands from D-Bus and from stream callbacks.
@@ -49,6 +50,11 @@ pub enum Cmd {
         index: i32,
     },
     SetMonitor(bool),
+    /// Choose the system default microphone (`sink == false`) or output (`sink == true`).
+    SetDefaultDevice {
+        sink: bool,
+        name: String,
+    },
     SetAbOriginal(bool),
     /// Put the system default microphone back to what it was before Sordino.
     RestoreDefault,
@@ -91,7 +97,7 @@ pub struct Engine {
     // graph knowledge
     sources: HashMap<u32, SourceNode>,
     /// Output devices (`node.name`), the echo reference is taken from their monitor.
-    sinks: HashMap<u32, String>,
+    sinks: HashMap<u32, SourceNode>,
     cards: HashMap<u32, CardInfo>,
     card_proxies: HashMap<u32, CardProxy>,
     metadata: Option<(u32, Metadata, MetadataListener)>,
@@ -336,7 +342,10 @@ impl Engine {
                     self.sordino_mic_node = Some(obj.id);
                 } else if !name.starts_with("sordino.") {
                     if get("media.class").as_deref() == Some("Audio/Sink") {
-                        self.sinks.insert(obj.id, name.clone());
+                        if let Some(sink) = SourceNode::from_props_class(obj.id, "Audio/Sink", get)
+                        {
+                            self.sinks.insert(obj.id, sink);
+                        }
                     }
                     if let Some(src) = SourceNode::from_props(obj.id, get) {
                         log::debug!("source added: {} ({})", src.name, src.description);
@@ -555,6 +564,7 @@ impl Engine {
                     }
                 }
             }
+            Cmd::SetDefaultDevice { sink, name } => self.set_default_device(sink, &name),
             Cmd::SetMonitor(on) => {
                 self.monitoring = on;
                 self.monitor_until = on.then(|| Instant::now() + MONITOR_KEEPALIVE);
@@ -586,6 +596,39 @@ impl Engine {
             }
         }
         self.dirty();
+    }
+
+    /// Make `name` the system default microphone or output.
+    fn set_default_device(&mut self, sink: bool, name: &str) {
+        if !sink && name == VIRTUAL_MIC_NAME {
+            // Same as the "use as default microphone" switch: remembers and restores the old one.
+            self.settings.set_default = true;
+            self.save_settings();
+            self.reconcile();
+            return;
+        }
+        if !sink && self.settings.set_default {
+            // Leaving Sordino Mic as the default: give the previous value back first, then
+            // overwrite it with the explicit choice below.
+            self.settings.set_default = false;
+            self.save_settings();
+            self.restore_default();
+        }
+        let Some((_, md, _)) = &self.metadata else {
+            return;
+        };
+        let key = if sink {
+            CONFIGURED_DEFAULT_SINK
+        } else {
+            CONFIGURED_DEFAULT_SOURCE
+        };
+        let value = serde_json::json!({ "name": name }).to_string();
+        md.set_property(0, key, Some("Spa:String:JSON"), Some(&value));
+        log::info!(
+            "default {} set to {name}",
+            if sink { "output" } else { "microphone" }
+        );
+        self.reconcile();
     }
 
     fn save_settings(&self) {
@@ -770,7 +813,7 @@ impl Engine {
             self.reference_target = None;
             worker.send(WorkerCmd::Reference(None));
             if let Some(target) = wanted_ref {
-                let is_sink = self.sinks.values().any(|n| *n == target);
+                let is_sink = self.sinks.values().any(|n| n.name == target);
                 let (prod, cons) = audio::new_ring();
                 match audio::create_reference(&core, &target, is_sink, prod, worker.wake_handle()) {
                     Ok(s) => {
@@ -1053,6 +1096,15 @@ impl Engine {
             devices: visible,
             hidden_devices: hidden,
             active_mic: self.capture_target.clone(),
+            sinks: {
+                let mut v: Vec<&SourceNode> = self.sinks.values().collect();
+                v.sort_by_key(|n| n.node_id);
+                v.into_iter()
+                    .map(|n| n.to_sink_device(&self.cards))
+                    .collect()
+            },
+            default_source: self.default_source.clone(),
+            default_sink: self.default_sink.clone(),
             profile_hint,
             latency_ms,
             default_is_sordino: self.default_source.as_deref() == Some(VIRTUAL_MIC_NAME),
@@ -1080,6 +1132,18 @@ impl Engine {
                 .map_or(0, |w| w.shared.model_errors.load(Relaxed) as u64),
             quantum: self.stats.quantum.load(Relaxed),
             out_callbacks: self.stats.out_callbacks.load(Relaxed),
+            overload_hops: self
+                .worker
+                .as_ref()
+                .map_or(0, |w| w.shared.overload_hops.load(Relaxed)),
+            overload_events: self
+                .worker
+                .as_ref()
+                .map_or(0, |w| w.shared.overload_events.load(Relaxed) as u64),
+            dsp_priority: self
+                .worker
+                .as_ref()
+                .map_or(0, |w| w.shared.priority.load(Relaxed)),
             skip_events: self.stats.skip_events.load(Relaxed),
             last_skip_cb: self.stats.last_skip_cb.load(Relaxed),
             last_drop_cycle: self.stats.last_drop_cycle.load(Relaxed),

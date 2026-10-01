@@ -122,9 +122,14 @@ pub struct WorkerShared {
     error: Mutex<Option<String>>,
     latency_samples: AtomicU32,
     pub echo_available: AtomicBool,
+    /// 0 normal, 1 high (nice), 2 real-time; see `rt`.
+    pub priority: AtomicU8,
     pub meter: Meter,
     /// Number of hops where the model failed (dry signal passed through).
     pub model_errors: AtomicU32,
+    /// Times the DSP thread fell behind real time, and hops processed without the noise model.
+    pub overload_events: AtomicU32,
+    pub overload_hops: AtomicU64,
 }
 
 pub enum WorkerHealth {
@@ -148,8 +153,11 @@ impl Worker {
             error: Mutex::new(None),
             latency_samples: AtomicU32::new(0),
             echo_available: AtomicBool::new(false),
+            priority: AtomicU8::new(0),
             meter: Meter::new(),
             model_errors: AtomicU32::new(0),
+            overload_events: AtomicU32::new(0),
+            overload_hops: AtomicU64::new(0),
         });
         let s = shared.clone();
         let handle = thread::Builder::new()
@@ -228,7 +236,12 @@ fn worker_loop(
     rx: &Receiver<WorkerCmd>,
     shared: &WorkerShared,
 ) -> Result<()> {
+    // Load the model first, at normal priority: it takes seconds of CPU time without blocking,
+    // which a real-time thread is not allowed to do (the kernel would kill the process).
     let mut pipeline = Pipeline::new(params)?;
+    let priority = crate::rt::promote_current_thread();
+    shared.priority.store(priority.as_u8(), Ordering::Relaxed);
+    log::info!("dsp thread priority: {priority}");
     shared
         .latency_samples
         .store(pipeline.latency_samples() as u32, Ordering::Relaxed);
@@ -247,6 +260,7 @@ fn worker_loop(
     let mut reference: Option<HeapCons<f32>> = None;
     let mut refbuf = [0.0f32; HOP];
     let (mut hops_with_ref, mut ref_missing, mut ref_dropped) = (0u64, 0u64, 0u64);
+    let mut overloaded = false;
     let mut dry = [0.0f32; HOP];
     let mut wet = [0.0f32; HOP];
 
@@ -269,12 +283,32 @@ fn worker_loop(
         }
 
         if let (Some(inp), Some(out)) = (input.as_mut(), output.as_mut()) {
-            while inp.occupied_len() >= HOP {
+            // At most a few hops per round, then block briefly: a real-time thread that never
+            // blocks is killed by the kernel (RLIMIT_RTTIME).
+            let mut batch = 0;
+            while inp.occupied_len() >= HOP && batch < 4 {
+                batch += 1;
                 if out.vacant_len() < HOP {
                     // Nobody is reading Sordino Mic. Do not queue stale audio: keep only the newest hop.
                     let stale = inp.occupied_len() - HOP;
                     inp.skip(stale);
                     break;
+                }
+                // Falling behind (more than ~5 hops queued): skip the noise model until we catch up,
+                // rather than dropping audio. Hysteresis avoids flapping.
+                let backlog = inp.occupied_len() / HOP;
+                if backlog >= 5 && !overloaded {
+                    overloaded = true;
+                    pipeline.set_overloaded(true);
+                    if shared.overload_events.fetch_add(1, Ordering::Relaxed) == 0 {
+                        log::warn!("DSP thread is falling behind real time; temporarily skipping noise suppression");
+                    }
+                } else if backlog <= 1 && overloaded {
+                    overloaded = false;
+                    pipeline.set_overloaded(false);
+                }
+                if overloaded {
+                    shared.overload_hops.fetch_add(1, Ordering::Relaxed);
                 }
                 inp.pop_slice(&mut dry);
                 // Echo reference: the newest hop if available, otherwise silence.
@@ -517,6 +551,10 @@ struct SourceData {
     /// Samples to collect before playing starts (jitter cushion).
     prebuffer: usize,
     stats: Option<Arc<AudioStats>>,
+    /// Extra cushion (samples) added after underruns when the system is too busy for the DSP
+    /// thread; it shrinks again after a calm period. Trades latency for glitch-free audio.
+    extra: usize,
+    calm_callbacks: u32,
 }
 
 /// What happened while filling a buffer.
@@ -601,7 +639,24 @@ fn with_output_buffer(stream: &pw::stream::Stream, fill: impl FnOnce(&mut [f32])
 fn process_source(stream: &pw::stream::Stream, st: &mut SourceData) {
     with_output_buffer(stream, |out| {
         let q = out.len();
-        let fill = fill_ring(&mut st.cons, &mut st.primed, st.prebuffer, HOP, out);
+        let fill = fill_ring(
+            &mut st.cons,
+            &mut st.primed,
+            st.prebuffer + st.extra,
+            HOP,
+            out,
+        );
+        if fill.underrun {
+            st.extra = (st.extra + HOP).min(8 * HOP);
+            st.calm_callbacks = 0;
+        } else {
+            st.calm_callbacks += 1;
+            if st.calm_callbacks > 1500 && st.extra > 0 {
+                // ~30 s without an underrun: try less latency again.
+                st.extra -= HOP;
+                st.calm_callbacks = 0;
+            }
+        }
         if let Some(stats) = &st.stats {
             stats.quantum.store(q as u32, Ordering::Relaxed);
             stats.out_callbacks.fetch_add(1, Ordering::Relaxed);
@@ -690,6 +745,8 @@ pub fn create_virtual_mic(
             primed: false,
             prebuffer: PREBUFFER,
             stats: Some(stats),
+            extra: 0,
+            calm_callbacks: 0,
         })
         .state_changed(watch_state("virtual-mic", errors))
         .process(process_source)
@@ -735,6 +792,8 @@ pub fn create_monitor(
                 primed: false,
                 prebuffer: HOP,
                 stats: None,
+                extra: 0,
+                calm_callbacks: 0,
             },
             raw,
             raw_primed: false,

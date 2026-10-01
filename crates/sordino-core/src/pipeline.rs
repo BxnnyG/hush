@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use crate::denoise::{Denoiser, Strength};
+use crate::denoise::{Denoiser, Strength, Thresholds};
 use crate::echo::Echo;
 use crate::studio::{StudioChain, StudioParams};
 use crate::HOP;
@@ -38,13 +38,19 @@ pub struct Pipeline {
     studio_mix: f32,
     stage: [f32; HOP],
     scratch: [f32; HOP],
+    /// The caller is falling behind real time: skip the expensive noise stage until it catches up.
+    overloaded: bool,
 }
 
 const SILENCE: [f32; HOP] = [0.0; HOP];
 
 impl Pipeline {
     pub fn new(params: PipelineParams) -> Result<Self> {
-        let denoiser = Denoiser::new(params.strength)?;
+        Self::with_thresholds(params, Thresholds::default())
+    }
+
+    pub fn with_thresholds(params: PipelineParams, thresholds: Thresholds) -> Result<Self> {
+        let denoiser = Denoiser::with_thresholds(params.strength, thresholds)?;
         let studio = StudioChain::new(params.studio.unwrap_or_default());
         // A missing echo canceller is not fatal: everything else keeps working.
         let echo = match Echo::new() {
@@ -64,7 +70,14 @@ impl Pipeline {
             studio_mix: if params.studio.is_some() { 1.0 } else { 0.0 },
             stage: [0.0; HOP],
             scratch: [0.0; HOP],
+            overloaded: false,
         })
+    }
+
+    /// Tell the pipeline that the caller is behind real time. While set, the noise stage is
+    /// bypassed (with the usual crossfade) so the backlog can be worked off cheaply.
+    pub fn set_overloaded(&mut self, overloaded: bool) {
+        self.overloaded = overloaded;
     }
 
     pub fn params(&self) -> PipelineParams {
@@ -142,7 +155,11 @@ impl Pipeline {
         }
 
         // Stage 1: noise suppression.
-        let noise_target = if self.params.noise { 1.0 } else { 0.0 };
+        let noise_target = if self.params.noise && !self.overloaded {
+            1.0
+        } else {
+            0.0
+        };
         if self.noise_mix > 0.0 || noise_target > 0.0 {
             match self.denoiser.process_hop(&self.stage, &mut self.scratch) {
                 Ok(_) => crossfade(&mut self.stage, &self.scratch, self.noise_mix, noise_target),
@@ -262,6 +279,37 @@ mod tests {
         let out = run(&mut p, &x);
         if !p.echo_available() {
             assert_eq!(out, x);
+        }
+        assert!(out.iter().all(|v| v.is_finite()));
+    }
+}
+
+#[cfg(test)]
+mod overload_tests {
+    use super::*;
+
+    #[test]
+    fn overload_bypasses_the_noise_stage_and_recovers() {
+        let mut p = Pipeline::new(PipelineParams {
+            echo: false,
+            noise: true,
+            strength: Strength::High,
+            studio: None,
+        })
+        .unwrap();
+        let x: Vec<f32> = (0..HOP * 40)
+            .map(|i| 0.2 * (2.0 * std::f32::consts::PI * 300.0 * i as f32 / 48000.0).sin())
+            .collect();
+        let mut out = vec![0.0; x.len()];
+        p.set_overloaded(true);
+        for (i, o) in x.chunks_exact(HOP).zip(out.chunks_exact_mut(HOP)).take(20) {
+            p.process(i, None, o).unwrap();
+        }
+        // While overloaded the signal passes through untouched (after the fade-out hop).
+        assert_eq!(&out[HOP * 2..HOP * 20], &x[HOP * 2..HOP * 20]);
+        p.set_overloaded(false);
+        for (i, o) in x.chunks_exact(HOP).zip(out.chunks_exact_mut(HOP)).skip(20) {
+            p.process(i, None, o).unwrap();
         }
         assert!(out.iter().all(|v| v.is_finite()));
     }

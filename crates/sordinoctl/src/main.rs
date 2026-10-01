@@ -22,6 +22,9 @@ USAGE: sordinoctl <command>
   studio off|natural|clear|warm
                               studio sound preset
   default on|off              make Sordino Mic the system default microphone
+  default-mic <node.name>     choose the system default microphone ('sordino_mic' for Sordino Mic)
+  default-output <node.name>  choose the system default output (speakers / headphones)
+  outputs                     list output devices
   fix-profile                 switch a mic stuck on 'pro-audio' to a call-friendly profile
   profile <card> <index>      switch a device profile by hand
   monitor on|off              hear yourself (use headphones!); 'on' runs until Ctrl+C
@@ -177,6 +180,20 @@ fn run() -> Result<()> {
                 d.in_dropped
             );
             println!("model errors:       {}", d.model_errors);
+            println!(
+                "overload:           {} episodes, {} hops ({:.1} s) without noise suppression",
+                d.overload_events,
+                d.overload_hops,
+                d.overload_hops as f64 * 0.01
+            );
+            println!(
+                "dsp thread:         {}",
+                match d.dsp_priority {
+                    2 => "real-time priority",
+                    1 => "high priority",
+                    _ => "normal priority (cannot be raised; may crackle under heavy load)",
+                }
+            );
             // A single underrun can happen when an app connects and the graph reschedules.
             if d.out_underruns <= 2 && d.out_skipped + d.in_dropped + d.model_errors == 0 {
                 println!("=> clean");
@@ -227,6 +244,29 @@ fn run() -> Result<()> {
             _ => bail!("usage: sordinoctl studio off|natural|clear|warm"),
         },
         "default" => c.apply(json!({"set_default": on_off(args.get(1))?}))?,
+        "default-mic" | "default-output" => {
+            let name = args
+                .get(1)
+                .context("usage: sordinoctl default-mic|default-output <node.name>")?;
+            let kind = if cmd == "default-mic" {
+                "source"
+            } else {
+                "sink"
+            };
+            c.proxy
+                .call::<_, _, ()>("SetDefaultDevice", &(kind, name.as_str()))?;
+        }
+        "outputs" => {
+            let s = c.state()?;
+            for d in &s.sinks {
+                let mark = if s.default_sink.as_deref() == Some(d.id.as_str()) {
+                    "*"
+                } else {
+                    " "
+                };
+                println!("{mark} {}  [{:?}]\n    id: {}", d.name, d.kind, d.id);
+            }
+        }
         "fix-profile" => {
             let s = c.state()?;
             let h = s

@@ -5,10 +5,10 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod autostart;
 mod bus;
 mod tray;
 
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use serde_json::Value;
@@ -64,34 +64,29 @@ async fn start_daemon(app: Shared<'_>) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn set_autostart(on: bool) -> Result<(), String> {
-    let path = autostart_path().ok_or("cannot find the autostart folder")?;
-    if on {
-        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-        let entry = format!(
-            "[Desktop Entry]\nType=Application\nName=Sordino\nComment=Microphone noise suppression\nExec=\"{}\" --hidden\nIcon=io.github.bxnnyg.Sordino\nTerminal=false\nX-GNOME-Autostart-enabled=true\n",
-            exe.display()
-        );
-        std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
-        std::fs::write(&path, entry).map_err(|e| e.to_string())
+fn get_autostart() -> autostart::Status {
+    autostart::status()
+}
+
+/// Start the window app (hidden, tray only) at login.
+#[tauri::command]
+async fn set_autostart(app: Shared<'_>, on: bool) -> Result<(), String> {
+    if autostart::is_flatpak() {
+        app.bus.request_background(on).await
     } else {
-        match std::fs::remove_file(&path) {
-            Ok(()) => Ok(()),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(e.to_string()),
-        }
+        autostart::set_app(on)
     }
 }
 
-fn autostart_path() -> Option<PathBuf> {
-    let base = std::env::var_os("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .filter(|p| p.is_absolute())
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))?;
-    Some(
-        base.join("autostart")
-            .join("io.github.bxnnyg.Sordino.desktop"),
-    )
+/// Start the daemon at login, so Sordino Mic exists even if the window was never opened.
+#[tauri::command]
+fn set_daemon_autostart(on: bool) -> Result<(), String> {
+    autostart::set_daemon(on)
+}
+
+#[tauri::command]
+async fn set_default_device(app: Shared<'_>, kind: String, name: String) -> Result<(), String> {
+    app.bus.call("SetDefaultDevice", &(kind, name)).await
 }
 
 /// Open the project page in the default browser. The URL is fixed on purpose: the UI cannot
@@ -230,7 +225,10 @@ fn main() {
             set_ab_original,
             set_watching,
             start_daemon,
+            get_autostart,
             set_autostart,
+            set_daemon_autostart,
+            set_default_device,
             open_repo,
             quit_app
         ])

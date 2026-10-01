@@ -1,12 +1,12 @@
 //! Run the Sordino pipeline offline on a file, for analysis and tuning.
 //!
 //! `process_file in.f32 out.f32 [--noise off|light|medium|high|max] [--studio off|natural|clear|warm]
-//!                          [--echo ref.f32]`
+//!                          [--echo ref.f32] [--thresh min,erb,df]`
 //!
 //! Files are raw mono 48 kHz f32le (convert with `ffmpeg -i in.wav -f f32le -ac 1 -ar 48000 in.f32`).
 //! The output is shifted back by the pipeline latency so it lines up with the input.
 
-use sordino_core::denoise::Strength;
+use sordino_core::denoise::{Strength, Thresholds};
 use sordino_core::pipeline::{Pipeline, PipelineParams};
 use sordino_core::studio::Preset;
 use sordino_core::HOP;
@@ -31,6 +31,7 @@ fn main() -> anyhow::Result<()> {
         studio: Preset::Natural.params(),
     };
     let mut reference: Option<Vec<f32>> = None;
+    let mut thresholds = Thresholds::default();
     let mut it = args[2..].iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -49,6 +50,20 @@ fn main() -> anyhow::Result<()> {
                 let p = Preset::parse(v).ok_or_else(|| anyhow::anyhow!("bad preset {v}"))?;
                 params.studio = p.params();
             }
+            "--thresh" => {
+                let v: Vec<f32> = it
+                    .next()
+                    .ok_or_else(|| anyhow::anyhow!("--thresh needs min,erb,df"))?
+                    .split(',')
+                    .map(|x| x.parse())
+                    .collect::<Result<_, _>>()?;
+                anyhow::ensure!(v.len() == 3, "--thresh needs three values");
+                thresholds = Thresholds {
+                    min_db: v[0],
+                    max_erb_db: v[1],
+                    max_df_db: v[2],
+                };
+            }
             "--echo" => {
                 reference = Some(read(
                     it.next()
@@ -61,7 +76,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     let input = read(&args[0])?;
-    let mut p = Pipeline::new(params)?;
+    let mut p = Pipeline::with_thresholds(params, thresholds)?;
     let latency = p.latency_samples();
     let hops = input.len().div_ceil(HOP);
     let mut padded = input.clone();

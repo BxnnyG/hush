@@ -30,6 +30,9 @@ pub enum DeviceKind {
     Builtin,
     Bluetooth,
     Headset,
+    Headphones,
+    Speaker,
+    Hdmi,
     Webcam,
     Loopback,
     Other,
@@ -83,6 +86,11 @@ pub struct State {
     pub hidden_devices: Vec<Device>,
     /// `node.name` of the microphone currently feeding the chain.
     pub active_mic: Option<String>,
+    /// Output devices (speakers, headphones, HDMI) for choosing the system default output.
+    pub sinks: Vec<Device>,
+    /// `node.name` of the current system default microphone / output.
+    pub default_source: Option<String>,
+    pub default_sink: Option<String>,
     pub profile_hint: Option<ProfileHint>,
     /// Estimated end-to-end latency added by Sordino, in milliseconds.
     pub latency_ms: Option<f32>,
@@ -119,6 +127,11 @@ pub struct Diag {
     /// Graph quantum (samples per cycle) seen by "Sordino Mic".
     pub quantum: u32,
     pub out_callbacks: u64,
+    /// Hops processed without noise suppression because the DSP thread fell behind real time.
+    pub overload_hops: u64,
+    pub overload_events: u64,
+    /// DSP thread priority: 0 normal, 1 high (nice), 2 real-time.
+    pub dsp_priority: u8,
     pub skip_events: u64,
     /// Callback number of the most recent skip / cycle number of the most recent input drop.
     pub last_skip_cb: u64,
@@ -146,6 +159,9 @@ mod tests {
             devices: vec![],
             hidden_devices: vec![],
             active_mic: Some("alsa_input.x".into()),
+            sinks: vec![],
+            default_source: None,
+            default_sink: None,
             profile_hint: None,
             latency_ms: Some(31.5),
             default_is_sordino: false,
