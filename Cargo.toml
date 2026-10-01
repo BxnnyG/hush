@@ -13,7 +13,7 @@ rust-version = "1.80"
 [workspace.dependencies]
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }
-toml = "0.8"
+toml = "1.1"
 log = "0.4"
 env_logger = "0.11"
 thiserror = "2"
