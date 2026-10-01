@@ -12,6 +12,8 @@ sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
   - org.freedesktop.Sdk.Extension.node22
+  # libclang for bindgen (pipewire-rs)
+  - org.freedesktop.Sdk.Extension.llvm20
 command: hush
 
 finish-args:
@@ -27,11 +29,12 @@ finish-args:
   - --talk-name=org.freedesktop.portal.Desktop
 
 build-options:
-  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin
+  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin:/usr/lib/sdk/llvm20/bin
   build-args:
     - --share=network
   env:
     CARGO_HOME: /run/build/hush/cargo
+    LIBCLANG_PATH: /usr/lib/sdk/llvm20/lib
 
 modules:
   - shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json
