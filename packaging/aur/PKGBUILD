@@ -6,7 +6,7 @@ pkgdesc='Virtual microphone with AI noise suppression (DeepFilterNet) and echo s
 arch=('x86_64')
 url='https://github.com/BxnnyG/hush'
 license=('GPL-3.0-or-later')
-depends=('pipewire' 'wireplumber' 'webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'webrtc-audio-processing-2' 'xdg-utils')
+depends=('pipewire' 'wireplumber' 'webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'webrtc-audio-processing' 'xdg-utils')
 makedepends=('rust' 'clang' 'nodejs' 'npm' 'git')
 options=('!debug')
 # HUSH_SOURCE_URL lets CI build from a local checkout (file:///...) instead of the release tag.

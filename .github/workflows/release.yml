@@ -93,7 +93,7 @@ jobs:
       - name: System packages
         run: |
           pacman -Syu --noconfirm base-devel git rust clang nodejs npm pipewire wireplumber \
-            webkit2gtk-4.1 gtk3 libayatana-appindicator webrtc-audio-processing-2 xdg-utils
+            webkit2gtk-4.1 gtk3 libayatana-appindicator webrtc-audio-processing xdg-utils
           useradd -m builder
       - uses: actions/checkout@v4
       - name: makepkg

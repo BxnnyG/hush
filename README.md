@@ -51,7 +51,7 @@ as AUR account registration is open again. Until then:
 ### From source
 
 You need `rust`, `clang`, `nodejs`, `npm`, `pipewire`, `webkit2gtk-4.1`, `libayatana-appindicator` and
-for echo suppression `webrtc-audio-processing-2` (or `meson` + `ninja`, then build with
+for echo suppression `webrtc-audio-processing` (Arch; or `meson` + `ninja`, then build with
 `--features hushd/echo-bundled` to compile WebRTC from the bundled source):
 
 ```sh
